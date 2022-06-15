@@ -1,0 +1,7 @@
+# WeatherStation® 100wx
+
+Web service to help with WeatherStation	® 100WX
+
+<p align="center">
+  <img height="300" src="https://d1py1ngsne97dt.cloudfront.net/ew0KICAiYnVja2V0IjogImVlLWZpbGVzIiwNCiAgImtleSI6ICJmaWxlcy8zODAzMi9pbWFnZXMvMTAwNTg5XzJfMjAyMDA1MTYxNTUzMjE5OTEuanBnIiwNCiAgImVkaXRzIjogew0KICAgICJyZXNpemUiOiB7DQogICAgICAiZml0IjogImNvbnRhaW4iLA0KICAgICAgImJhY2tncm91bmQiOiB7DQogICAgICAgICJyIjogMjU1LA0KICAgICAgICAiZyI6IDI1NSwNCiAgICAgICAgImIiOiAyNTUsDQogICAgICAgICJhbHBoYSI6IDENCiAgICAgIH0sDQogICAgICAid2lkdGgiOiAzNTAsDQogICAgICAiaGVpZ2h0IjogMzA2DQogICAgfQ0KICB9DQp9">
+</p>
