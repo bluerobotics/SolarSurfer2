@@ -15,7 +15,8 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=[
         "fastapi == 0.63.0",
-        "fastapi-versioning == 0.9.1",
         "pynmea2 == 1.18.0",
+        "pyserial == 3.5",
+        "uvicorn==0.17.6",
     ],
 )

@@ -1,45 +1,71 @@
-#!/usr/bin/env python
+#! /usr/bin/env python3
 
 import argparse
-import os
-from functools import cache
-import aiohttp
-from aiohttp import web
+import asyncio
+import pynmea2
+import serial
+import time
+import uvicorn
+from pprint import pprint
+from typing import Any, List
+from fastapi import Depends, FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 
-parser = argparse.ArgumentParser(description="Web service to help with WeatherStation® 100WX")
-parser.add_argument("-p", "--port", help="Port to run web server", action="store_true", default=9990)
+parser = argparse.ArgumentParser(description="WeatherStation® 100WX Service")
+parser.add_argument("--serial", type=str, help="Serial port", required=True)
 
 args = parser.parse_args()
 
+app = FastAPI()
 
-async def websocket_echo(request: web.Request) -> web.WebSocketResponse:
-    websocket = web.WebSocketResponse()
-    await websocket.prepare(request)
+# for nome information of units and variables check this: https://github.com/Knio/pynmea2/blob/e2dd9e5716d144dd24161b5622622fcf9be7e6b1/pynmea2/types/talker.py
 
-    async for message in websocket:
-        if message.type == aiohttp.WSMsgType.TEXT:
-            await websocket.send_str(message.data)
+global_data = {}
 
-    return websocket
+def handle_nmea(nmea_message) -> None:
+    message_dict = {}
+    for i in range(len(nmea_message.fields)):
+        message_dict[nmea_message.fields[i][1]] = nmea_message.data[i]
+    print(message_dict)
+    global_data[nmea_message.sentence_type] = message_dict
 
+async def read_data() -> None:
+    print("Rading data thread running.")
+    while True:
+        await asyncio.sleep(5)
+        try:
+            with serial.Serial(args.serial, baudrate=4800, timeout=1) as device:
+                while True:
+                    await asyncio.sleep(0.01)
+                    line = device.readline().decode('ascii', errors='replace').strip()
+                    try:
+                        message = pynmea2.parse(line)
+                        print(message.sentence_type)
+                        handle_nmea(message)
+                    except Exception as exception:
+                        print(f"Exception: {exception}")
+        except Exception as exception:
+            print(f"Exception: {exception}")
 
-async def data(request: web.Request) -> web.Response:
-    return web.Response(status=200, body="test")
-
-
-# pylint: disable=unused-argument
-async def root(request: web.Request) -> web.Response:
-    html_content = """
-    <html>
-        <head>
-            <title>WeatherStation® 100WX</title>
-        </head>
-    </html>
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return """
+        <html>
+            <head>
+                <title>WeatherStation® 100WX</title>
+            </head>
+        </html>
     """
-    return web.Response(text=html_content, content_type="text/html")
 
-app = web.Application()
-app.add_routes([web.get("/ws", websocket_echo)])
-app.router.add_get("/", root, name="root")
-app.router.add_get("/data", data, name="data")
-web.run_app(app, path="0.0.0.0", port=args.port)
+@app.get("/data", response_class=JSONResponse)
+async def data():
+    return global_data
+
+if __name__ == "__main__":
+    loop = asyncio.new_event_loop()
+
+    config = uvicorn.Config(app=app, loop=loop, host="0.0.0.0", port=9990, log_config=None)
+    server = uvicorn.Server(config)
+
+    loop.create_task(read_data())
+    loop.run_until_complete(server.serve())
