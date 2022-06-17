@@ -7,7 +7,7 @@ import time
 from loguru import logger
 from adafruit_rockblock import RockBlock, mo_status_message
 
-REST_TIME = 3600
+REST_TIME = 600
 unsent_data = []
 
 def send_data_through_rockblock():
