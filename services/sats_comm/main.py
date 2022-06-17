@@ -79,4 +79,6 @@ def main():
             time.sleep(REST_TIME)
 
 if __name__ == "__main__":
+    # Wait a minute for the sensors to boot before starting regular routine
+    time.sleep(60)
     main()
