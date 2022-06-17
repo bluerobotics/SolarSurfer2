@@ -14,6 +14,7 @@ MAV_COMPONENT_ID_ONBOARD_COMPUTER4=194
 
 SERVICES=(
     'weatherstation100wx',"$SERVICES_PATH/weatherstation100wx/main.py"
+    'victron-energy-mppt',"$SERVICES_PATH/victron-energy-mppt/main.py"
 )
 
 tmux -f /etc/tmux.conf start-server
