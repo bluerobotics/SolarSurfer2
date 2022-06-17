@@ -18,5 +18,7 @@ setuptools.setup(
         "pynmea2 == 1.18.0",
         "pyserial == 3.5",
         "uvicorn==0.17.6",
+        "requests==2.28.0",
+        "loguru==0.6.0",
     ],
 )
