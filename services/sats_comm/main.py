@@ -80,5 +80,6 @@ def main():
 
 if __name__ == "__main__":
     # Wait a minute for the sensors to boot before starting regular routine
+    logger.debug("Waiting for sensors to get online.")
     time.sleep(60)
     main()
