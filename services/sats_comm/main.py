@@ -8,6 +8,8 @@ import time
 from loguru import logger
 from adafruit_rockblock import RockBlock, mo_status_message
 
+from messages import serialize
+
 REST_TIME = 600
 unsent_data = []
 
@@ -112,16 +114,16 @@ def gather_sensors_data():
 
     try:
         cpu_average_usage = -1
-        memory_usage = -1
-        available_disk_space = -1
+        used_memory = -1
+        used_disk_space = -1
         response = requests.get("http://127.0.0.1:6030/system", timeout=5)
         data = response.json()
         total_cpu_usage = 0
         for cpu in data["cpu"]:
             total_cpu_usage += cpu["usage"]
         cpu_average_usage = float(total_cpu_usage / 4)
-        available_disk_space = float(data["disk"][0]["available_space_B"])
-        memory_usage = float(data["memory"]["ram"]["used_kB"])
+        used_disk_space = (float(data["disk"][0]["total_space_B"]) - float(data["disk"][0]["available_space_B"]))*100/float(data["disk"][0]["total_space_B"])
+        used_memory = float(data["memory"]["ram"]["used_kB"])*100/float(data["memory"]["ram"]["total_kB"])
     except Exception as error:
         logger.error(f"Failed fetching linux system data. {error=}")
 
@@ -143,28 +145,38 @@ def gather_sensors_data():
     except Exception as error:
         logger.error(f"Failed fetching autopilot motor data. {error=}")
 
-    new_data = struct.pack("1f", time.time())
-    new_data += struct.pack("1f", wind_angle)
-    new_data += struct.pack("1f", wind_speed)
-    new_data += struct.pack("1f", air_pressure_bar)
-    new_data += struct.pack("1f", air_temp)
-    new_data += struct.pack("1f", solar_panel_voltage)
-    new_data += struct.pack("1f", solar_panel_power)
-    new_data += struct.pack("1f", heading)
-    new_data += struct.pack("1f", gps_lat)
-    new_data += struct.pack("1f", gps_lon)
-    new_data += struct.pack("1f", water_temp)
-    new_data += struct.pack("1f", roll)
-    new_data += struct.pack("1f", pitch)
-    new_data += struct.pack("1f", battery_current)
-    new_data += struct.pack("1f", battery_voltage)
-    new_data += struct.pack("1f", cpu_average_usage)
-    new_data += struct.pack("1f", memory_usage)
-    new_data += struct.pack("1f", available_disk_space)
-    new_data += struct.pack("1f", left_motor_pwm)
-    new_data += struct.pack("1f", right_motor_pwm)
-    new_data += struct.pack("1s", str.encode(mission_status))
-    return new_data
+    global_message = {
+        'name': 'global',
+        'heading': heading*255/360,
+        'max_abs_roll': 0,
+        'max_abs_pitch': 0,
+        'battery_voltage': battery_voltage*255/20,
+        'battery_current': battery_current*255/64,
+        'solar_voltage': solar_panel_voltage*255/64,
+        'solar_power': solar_panel_power*255/200,
+        'throttle_first': ((left_motor_pwm-1100)/800)*255,
+        'throttle_second': ((right_motor_pwm-1100)/800)*255,
+        'air_temperature': air_temp*255/64,
+        'water_temperature': 0, #water_temp*255/64,
+        'cpu': cpu_average_usage*255/100,
+        'memory': used_memory*255/100,
+        'disk': used_disk_space*255/100,
+        'raspberry_temp': 0,
+        'raspberry_volt': 0,
+        'mission_status': 0, #mission_status,
+        'wind_speed': wind_speed*255/64,
+        'wind_angle': wind_angle*255/360,
+        'gps_fix_type': 255,
+        'sat_number': 255,
+        'lattitude': gps_lat,
+        'longitude': gps_lon,
+        'next_waypoint_lattitude': 0,
+        'next_waypoint_longitude': 0,
+        'vdop': 0,
+        'hdop': 0,
+    }
+
+    return serialize(global_message)
 
 
 def main():
