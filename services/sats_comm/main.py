@@ -128,7 +128,7 @@ def gather_sensors_data():
     try:
         left_motor_pwm = -1
         right_motor_pwm = -1
-        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/BATTERY_STATUS/message", timeout=5)
+        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/SERVO_OUTPUT_RAW/message", timeout=5)
         data = response.json()
         left_motor_pwm = float(data["servo1_raw"])
         right_motor_pwm = float(data["servo3_raw"])
