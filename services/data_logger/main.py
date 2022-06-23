@@ -107,55 +107,6 @@ def main(args: argparse.Namespace):
 
     tasks = []
 
-    # This saves all mavlink messages in different files
-    mavlink_messages = [
-        'AHRS',
-        'AHRS2',
-        'ATTITUDE',
-        'BATTERY_STATUS',
-        'COMMAND_ACK',
-        'EKF_STATUS_REPORT',
-        'GLOBAL_POSITION_INT',
-        'GPS_GLOBAL_ORIGIN',
-        'GPS_RAW_INT',
-        'GPS2_RAW',
-        'HEARTBEAT',
-        'HOME_POSITION',
-        'HWSTATUS',
-        'LOCAL_POSITION_NED',
-        'MEMINFO',
-        'MISSION_CURRENT',
-        'PARAM_VALUE',
-        'POWER_STATUS',
-        'RAW_IMU',
-        'RC_CHANNELS',
-        'RC_CHANNELS_SCALED',
-        'SCALED_IMU2',
-        'SCALED_IMU3',
-        'SCALED_PRESSURE',
-        'SERVO_OUTPUT_RAW',
-        'STATUSTEXT',
-        'SYS_STATUS',
-        'SYSTEM_TIME',
-        'TIMESYNC',
-        'VFR_HUD',
-        'VIBRATION',
-    ]
-    for message in mavlink_messages:
-        tasks.append(
-            {
-                'task': generic_api_data_logger,
-                'thread': None,
-                'args': {
-                    'newfile_interval': datalog_newfile_interval,
-                    'output_dir': datalog_dir,
-                    'request_interval': request_interval,
-                    'service_name': f'Mavlink {message}',
-                    'url': f'http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/{message}/message'
-                },
-            }
-        )
-
     for service in [
         {'service_name': 'Weather Station',
          'url': 'http://127.0.0.1:9990/data'},
