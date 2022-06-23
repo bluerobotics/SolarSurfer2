@@ -159,7 +159,7 @@ def gather_sensors_data():
         air_pressure_bar = float(data["MDA"]["b_pressure_bar"])
         air_temp = float(data["MDA"]["air_temp"])
     except Exception as error:
-        logger.error(f"Failed fetching weather data. {error=}")
+        logger.exception(f"Failed fetching weather data. {error=}")
 
     try:
         solar_panel_voltage = -1
@@ -169,7 +169,7 @@ def gather_sensors_data():
         solar_panel_voltage = float(int(data["VPV"]) / 1000)
         solar_panel_power = float(data["PPV"])
     except Exception as error:
-        logger.error(f"Failed fetching solar panel data. {error=}")
+        logger.exception(f"Failed fetching solar panel data. {error=}")
 
     try:
         heading = -1
@@ -182,7 +182,7 @@ def gather_sensors_data():
         gps_lat = float(data["lat"] / 1e7)
         gps_lon = float(data["lon"] / 1e7)
     except Exception as error:
-        logger.error(f"Failed fetching autopilot position data. {error=}")
+        logger.exception(f"Failed fetching autopilot position data. {error=}")
 
     try:
         water_temp = -1
@@ -190,7 +190,7 @@ def gather_sensors_data():
         data = response.json()
         water_temp = float(data["temperature"] / 100)
     except Exception as error:
-        logger.error(f"Failed fetching autopilot bar100 data. {error=}")
+        logger.exception(f"Failed fetching autopilot bar100 data. {error=}")
 
     try:
         roll = -1
@@ -200,7 +200,7 @@ def gather_sensors_data():
         roll = math.degrees(data["roll"])
         pitch = math.degrees(data["pitch"])
     except Exception as error:
-        logger.error(f"Failed fetching autopilot attitude data. {error=}")
+        logger.exception(f"Failed fetching autopilot attitude data. {error=}")
 
     try:
         battery_current = -1
@@ -210,7 +210,7 @@ def gather_sensors_data():
         battery_current = float(data["current_battery"] / 100)
         battery_voltage = float(data["voltages"][0] / 1000)
     except Exception as error:
-        logger.error(f"Failed fetching autopilot battery data. {error=}")
+        logger.exception(f"Failed fetching autopilot battery data. {error=}")
 
     try:
         cpu_average_usage = -1
@@ -225,7 +225,7 @@ def gather_sensors_data():
         used_disk_space = (float(data["disk"][0]["total_space_B"]) - float(data["disk"][0]["available_space_B"]))*100/float(data["disk"][0]["total_space_B"])
         used_memory = float(data["memory"]["ram"]["used_kB"])*100/float(data["memory"]["ram"]["total_kB"])
     except Exception as error:
-        logger.error(f"Failed fetching linux system data. {error=}")
+        logger.exception(f"Failed fetching linux system data. {error=}")
 
     try:
         left_motor_pwm = -1
@@ -235,7 +235,7 @@ def gather_sensors_data():
         left_motor_pwm = float(data["servo1_raw"])
         right_motor_pwm = float(data["servo3_raw"])
     except Exception as error:
-        logger.error(f"Failed fetching autopilot motor data. {error=}")
+        logger.exception(f"Failed fetching autopilot motor data. {error=}")
 
     try:
         mission_status = 0
@@ -243,7 +243,7 @@ def gather_sensors_data():
         data = response.json()
         mission_status = data["mission_status"]
     except Exception as error:
-        logger.error(f"Failed fetching autopilot motor data. {error=}")
+        logger.exception(f"Failed fetching autopilot motor data. {error=}")
 
     global_message = {
         'name': 'global',
@@ -279,13 +279,14 @@ def gather_sensors_data():
     return serialize(global_message)
 
 
-async def main_data_out_loop():
+async def main_data_out_loop(args: argparse.Namespace):
     while True:
         try:
             logger.debug("Gattering data from payloads.")
             new_data = gather_sensors_data()
 
-            logger.debug(f"Storing gathered data on memory persistency: {new_data}")
+            logger.debug(
+                f"Storing gathered data on memory persistency: {new_data}")
             unsent_data.append(new_data)
 
             logger.debug("Trying to send gathered data through satellites.")
@@ -310,20 +311,57 @@ async def main_data_in_loop():
             logger.debug(f"Resting for a moment ({REST_TIME_DATA_IN} seconds) before checking for new incoming messages.")
             await asyncio.sleep(REST_TIME_DATA_IN)
 
+
+class LoguruLevelArgumentValidator(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        """ Parse loguru log levels """
+        levels = ["TRACE", "DEBUG", "INFO",
+                  "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
+        if values not in levels:
+            raise argparse.ArgumentTypeError(
+                f"Wrong log level passed, available: {levels}.")
+        setattr(namespace, self.dest, values)
+
+
+def get_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Sattelite Communication Service", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument("--loguru-output-dir", type=str, default=".",
+                        help="Configure loguru output dir.")
+    parser.add_argument("-v", "--verbosity", dest="verbosity", type=str, action=LoguruLevelArgumentValidator, default="INFO",
+                        help="Configure loguru verbosity level: TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL.")
+
+    return parser.parse_args()
+
+
+def configure_logging(args: argparse.Namespace):
+    loguru_output_file = args.loguru_output_dir + \
+        "/loguru_datalogger_{time}.log"
+
+    logger.add(loguru_output_file,
+               level=args.verbosity, rotation="00:00", compression="zip")
+    logger.warning(
+        f"This service is being logged with Loguru with level {args.verbosity} into the file {loguru_output_file}.")
+
+
 if __name__ == "__main__":
+    args = get_arguments()
+    configure_logging(args)
     while True:
         try:
             # Wait a minute for the sensors to boot before starting regular routine
-            logger.debug("Waiting for sensors to get online.")
-            time.sleep(60)
+            delay = 60
+            logger.info(f"Waiting {delay} seconds for sensors to get online...")
+            time.sleep(delay)
 
             # Log information about the satellite modem
             log_modem_info()
 
             # Main data in and data out loops
             loop = asyncio.new_event_loop()
-            loop.create_task(main_data_in_loop())
-            loop.create_task(main_data_out_loop())
+            loop.create_task(main_data_in_loop(args))
+            loop.create_task(main_data_out_loop(args))
             loop.run_forever()
         except Exception as e:
             logger.error("Exception in the main loop. Restarting.")
