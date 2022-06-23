@@ -57,7 +57,7 @@ def gather_sensors_data():
         air_pressure_bar = float(data["MDA"]["b_pressure_bar"])
         air_temp = float(data["MDA"]["air_temp"])
     except Exception as error:
-        logger.error(f"Failed fetching weather data. {error}")
+        logger.error(f"Failed fetching weather data. {error=}")
 
     try:
         solar_panel_voltage = -1
@@ -67,7 +67,7 @@ def gather_sensors_data():
         solar_panel_voltage = float(int(data["VPV"]) / 1000)
         solar_panel_power = float(data["PPV"])
     except Exception as error:
-        logger.error(f"Failed fetching solar panel data. {error}")
+        logger.error(f"Failed fetching solar panel data. {error=}")
 
     try:
         heading = -1
@@ -80,7 +80,7 @@ def gather_sensors_data():
         gps_lat = float(data["lat"] / 1e7)
         gps_lon = float(data["lon"] / 1e7)
     except Exception as error:
-        logger.error(f"Failed fetching autopilot position data. {error}")
+        logger.error(f"Failed fetching autopilot position data. {error=}")
 
     try:
         water_temp = -1
@@ -88,7 +88,7 @@ def gather_sensors_data():
         data = response.json()
         water_temp = float(data["temperature"] / 100)
     except Exception as error:
-        logger.error(f"Failed fetching autopilot bar100 data. {error}")
+        logger.error(f"Failed fetching autopilot bar100 data. {error=}")
 
     try:
         roll = -1
@@ -98,7 +98,7 @@ def gather_sensors_data():
         roll = math.degrees(data["roll"])
         pitch = math.degrees(data["pitch"])
     except Exception as error:
-        logger.error(f"Failed fetching autopilot attitude data. {error}")
+        logger.error(f"Failed fetching autopilot attitude data. {error=}")
 
     try:
         battery_current = -1
@@ -108,7 +108,7 @@ def gather_sensors_data():
         battery_current = float(data["current_battery"] / 100)
         battery_voltage = float(data["voltages"][0] / 1000)
     except Exception as error:
-        logger.error(f"Failed fetching autopilot battery data. {error}")
+        logger.error(f"Failed fetching autopilot battery data. {error=}")
 
     try:
         cpu_average_usage = -1
@@ -123,7 +123,7 @@ def gather_sensors_data():
         available_disk_space = float(data["disk"][0]["available_space_B"])
         memory_usage = float(data["memory"]["ram"]["used_kB"])
     except Exception as error:
-        logger.error(f"Failed fetching linux system data. {error}")
+        logger.error(f"Failed fetching linux system data. {error=}")
 
     try:
         left_motor_pwm = -1
@@ -133,7 +133,7 @@ def gather_sensors_data():
         left_motor_pwm = float(data["servo1_raw"])
         right_motor_pwm = float(data["servo3_raw"])
     except Exception as error:
-        logger.error(f"Failed fetching autopilot motor data. {error}")
+        logger.error(f"Failed fetching autopilot motor data. {error=}")
 
     try:
         mission_status = "undefined"
@@ -141,7 +141,7 @@ def gather_sensors_data():
         data = response.json()
         mission_status = data["mission_status"]
     except Exception as error:
-        logger.error(f"Failed fetching autopilot motor data. {error}")
+        logger.error(f"Failed fetching autopilot motor data. {error=}")
 
     new_data = struct.pack("1f", time.time())
     new_data += struct.pack("1f", wind_angle)
