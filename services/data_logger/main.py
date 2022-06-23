@@ -8,6 +8,7 @@ import argparse
 from loguru import logger
 import threading
 from datetime import timedelta
+from typing import Callable
 
 from data_logger import DataLogger
 
@@ -62,7 +63,7 @@ def mock_data_gathering(*_unused) -> dict:
     })
 
 
-def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, request_interval: timedelta, service_name: str, url: str, timeout: int = 5):
+def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, request_interval: timedelta, service_name: str, url: str, timeout: int = 5, filter: Callable[[dict], dict] = None):
     """ This function uses the DataLogger class to log any json data gathered
      from any given url, storing to a specific csv datalog file stored in
      `output_dir. This csv file is periodicly being rotated as specified in
@@ -70,6 +71,12 @@ def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, reques
     keys = []
     while len(keys) == 0:
         data = data_gathering(service_name, url, timeout)
+        if filter is not None and isinstance(data, dict):
+            try:
+                data = filter(data)
+            except Exception as e:
+                logger.exception(e)
+
         if isinstance(data, dict):
             keys = data.keys()
 
@@ -79,7 +86,13 @@ def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, reques
     with DataLogger(keys, newfile_interval=newfile_interval, output_dir=output_dir, log_with_timestamp=True, filename_prefix=filename_prefix) as datalogger:
         while True:
             data = data_gathering(service_name, url, timeout)
-            logger.debug(
+            if filter is not None:
+                try:
+                    data = filter(data)
+                except Exception as e:
+                    logger.exception(e)
+
+            logger.trace(
                 f"{service_name}'s DataLogger (\"{datalogger._filename}\"). {data=}")
             datalogger.log(data)
 
@@ -115,9 +128,9 @@ def main(args: argparse.Namespace):
         # This saves all mavlink messages in the same file
         {'service_name': 'Autopilot mavlink messages',
          'url': 'http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages'},
-        # TODO: Get CPU, DISK and RAM stats
-        # {'service_name': 'Mission Status',
-        #  'url': 'http://127.0.0.1:6030/system'},
+        {'service_name': 'System Information',
+         'url': 'http://127.0.0.1:6030/system',
+         'filter': system_information_filter},
     ]:
         tasks.append(
             {
@@ -128,7 +141,8 @@ def main(args: argparse.Namespace):
                     'output_dir': datalog_dir,
                     'request_interval': request_interval,
                     'service_name': service['service_name'],
-                    'url': service['url']
+                    'url': service['url'],
+                    'filter': service.get('filter', None),
                 },
             }
         )
@@ -143,6 +157,17 @@ def main(args: argparse.Namespace):
                 task['thread'] = threading.Thread(
                     target=task['task'], daemon=True, kwargs=task['args'])
                 task['thread'].start()
+
+
+def system_information_filter(data: dict) -> dict:
+    return {
+        "cpu": data.get("cpu", None),
+        "disk": data.get("disk", None),
+        "network": data.get("network", None),
+        "memory": data.get("memory", None),
+        "temperature": data.get("temperature", None),
+        "unix_time_seconds": data.get("unix_time_seconds", None),
+    }
 
 
 if __name__ == "__main__":
