@@ -163,7 +163,7 @@ def gather_sensors_data():
     new_data += struct.pack("1f", available_disk_space)
     new_data += struct.pack("1f", left_motor_pwm)
     new_data += struct.pack("1f", right_motor_pwm)
-    new_data += struct.pack("1f", mission_status)
+    new_data += struct.pack("1s", str.encode(mission_status))
     return new_data
 
 
