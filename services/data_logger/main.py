@@ -38,7 +38,7 @@ def data_gathering(service_name: str, url: str, timeout: int = 5) -> dict:
         if response.status_code == 200 and response.text != 'None':
             data = flatten_dict(response.json())
     except Exception as error:
-        logger.error(f"Failed fetching {service_name} data. {error=}")
+        logger.exception(f"Failed fetching {service_name} data. {error=}")
 
     return data
 
@@ -121,17 +121,6 @@ def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, reques
             datalogger.log(data)
 
             time.sleep(request_interval.total_seconds())
-
-
-def hours_minutes_seconds(time: str) -> timedelta:
-    """ Creates a timedelta object extracting `hours, minutes, seconds` from a `HH: MM: SS` string """
-    ret = None
-    try:
-        h, m, s = [int(a) if a != '' else 0 for a in time.split(':')]
-        ret = timedelta(hours=h, minutes=m, seconds=s)
-    except Exception:
-        raise ValueError('wrong time format')
-    return ret
 
 
 def main(args: argparse.Namespace):
@@ -233,19 +222,62 @@ def monitor_dir_size_growth(dir: str, period: int = 60):
         time.sleep(period)
 
 
-if __name__ == "__main__":
+class TimedeltaArgumentValidator(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        """ Creates a timedelta object extracting `hours, minutes, seconds` from a `HH:MM:SS` string """
+        try:
+            h, m, s = [int(a) if a != '' else 0 for a in values.split(':')]
+            time = timedelta(hours=h, minutes=m, seconds=s)
+        except Exception:
+            raise argparse.ArgumentTypeError(
+                "Wrong time format, expect \"HH:MM:SS\".")
+        setattr(namespace, self.dest, time)
+
+
+class LoguruLevelArgumentValidator(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        """ Parse loguru log levels """
+        levels = ["TRACE", "DEBUG", "INFO",
+                  "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
+        if values not in levels:
+            raise argparse.ArgumentTypeError(
+                f"Wrong log level passed, available: {levels}.")
+        setattr(namespace, self.dest, values)
+
+
+def get_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--datalog-output-dir", type=str,
                         help="Output directory for datalog files.", default=".", required=False)
-    parser.add_argument("--datalog-newfile-interval", type=hours_minutes_seconds,
+    parser.add_argument("--datalog-newfile-interval", type=str, action=TimedeltaArgumentValidator,
                         help="Time between swap to a new file.", default='24:00:00', required=False)
-    parser.add_argument("--services-request-interval", type=hours_minutes_seconds,
+    parser.add_argument("--services-request-interval", type=str, action=TimedeltaArgumentValidator,
                         help="Time between data requests.", default='00:01:00', required=False)
     parser.add_argument("--mock-data", type=bool,
                         help="Generate mock data for testing.", default=False, required=False)
-    args = parser.parse_args()
+    parser.add_argument("--loguru-output-dir", type=str, default=".",
+                        help="Configure loguru output dir.")
+    parser.add_argument("-v", "--verbosity", dest="verbosity", type=str, action=LoguruLevelArgumentValidator, default="INFO",
+                        help="Configure loguru verbosity level: TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL.")
+
+    return parser.parse_args()
+
+
+def configure_logging(args: argparse.Namespace):
+    loguru_output_file = args.loguru_output_dir + \
+        "/loguru_datalogger_{time}.log"
+
+    logger.add(loguru_output_file,
+               level=args.verbosity, rotation="00:00", compression="zip")
+    logger.warning(
+        f"This service is being logged with Loguru with level {args.verbosity} into the file {loguru_output_file}.")
+
+
+if __name__ == "__main__":
+    args = get_arguments()
+    configure_logging(args)
 
     if args.mock_data:
         data_gathering = mock_data_gathering
