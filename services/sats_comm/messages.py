@@ -70,7 +70,10 @@ def _serialize(content, name):
     definition = MESSAGES[name]
     data = []
     for name, field, kind in definition['fields']:
-        data += [pack(ENDIAN + field, content[name])]
+        value = content[name]
+        print(name, value, field)
+        value = value if 'f' in field else int(value)
+        data += [pack(ENDIAN + field, value)]
     return b''.join(data)
 
 def _deserialize(data, name):
