@@ -2,6 +2,7 @@
 
 import collections
 import os
+import subprocess
 import time
 import requests
 import argparse
@@ -147,6 +148,17 @@ def main(args: argparse.Namespace):
             }
         )
 
+    tasks.append(
+        {
+            'task': monitor_dir_size_growth,
+            'thread': None,
+            'args': {
+                'dir': datalog_dir,
+                'period': 60,
+            },
+        }
+    )
+
     # start/restart all tasks as daemons so that they are killed when the main program exits
     while True:
         time.sleep(1)
@@ -168,6 +180,34 @@ def system_information_filter(data: dict) -> dict:
         "temperature": data.get("temperature", None),
         "unix_time_seconds": data.get("unix_time_seconds", None),
     }
+
+
+def du(path):
+    """disk usage in bytes"""
+    size = int(0)
+    try:
+        size = int(subprocess.check_output(
+            ['du', path]).split()[0].decode('utf-8'))
+    except Exception as error:
+        logger.exception(
+            f"Error trying to compute dir {path} size: {error=}")
+    return size
+
+
+def monitor_dir_size_growth(dir: str, period: int = 60):
+    sizes = [du(dir), 0]  # as [new, old]
+    times = [time.time(), 0]  # as [new, old]
+    while True:
+        size = du(dir)
+        if size != sizes[0]:
+            sizes = [size, sizes[0]]
+            times = [time.time(), times[0]]
+            size_growth = (sizes[0] - sizes[1]) / (times[0] - times[1])
+            size_growth *= 24 * 3600 / 1024**2  # bytes per second to megabytes per day
+            logger.info(
+                f"Directory: ({dir}) size growth: {size_growth} mb per day.")
+
+        time.sleep(period)
 
 
 if __name__ == "__main__":
