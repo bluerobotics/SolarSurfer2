@@ -14,7 +14,7 @@ unsent_data = []
 def send_data_through_rockblock():
     # Connect to the Rockblock modem
     ser = serial.Serial(
-        "/dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.4:1.0-port0",
+        "/dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.1:1.0-port0",
         baudrate=19200,
         bytesize=8,
         parity="N",
