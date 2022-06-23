@@ -84,7 +84,7 @@ def gather_sensors_data():
 
     try:
         water_temp = -1
-        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/SCALED_PRESSURE2/message", timeout=5)
+        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/SCALED_PRESSURE/message", timeout=5)
         data = response.json()
         water_temp = float(data["temperature"] / 100)
     except Exception as error:
