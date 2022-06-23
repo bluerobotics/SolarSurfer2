@@ -13,7 +13,7 @@ MAV_SYSTEM_ID=1
 MAV_COMPONENT_ID_ONBOARD_COMPUTER4=194
 
 SERVICES=(
-    'weatherstation100wx',"$SERVICES_PATH/weatherstation100wx/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2.3:1.0-port0"
+    'weatherstation100wx',"$SERVICES_PATH/weatherstation100wx/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2.2:1.0-port0"
     'victron-energy-mppt',"$SERVICES_PATH/victron-energy-mppt/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2.2:1.0-port0"
     'sats_comm',"$SERVICES_PATH/sats_comm/main.py"
 )
