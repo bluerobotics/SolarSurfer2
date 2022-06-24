@@ -2,15 +2,16 @@
 
 import argparse
 import asyncio
+import json
 import math
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import requests
 import serial
 import time
 from loguru import logger
 from adafruit_rockblock import RockBlock, mo_status_message
 
-from messages import serialize
+from messages import serialize, serialize_message
 
 parser = argparse.ArgumentParser(description="Satellite communication service")
 parser.add_argument("--serial", type=str, help="Serial port", required=True)
@@ -43,20 +44,24 @@ def send_data_through_rockblock():
             retries += 1
     ser.close()
 
-def get_data_through_rockblock() -> None:
+def get_data_through_rockblock() -> Optional[bytes]:
+    last_message = None
     rb, ser = init_rockblock()
     logger.debug(f"Status: {rb.status}")
     logger.debug(f"Ring Alert mode: {rb.ring_alert}")
     logger.debug(f"Ring Alert status: {rb.ring_indication}")
-    status_pkg = rb.satellite_transfer()
-    mo_status = status_pkg[0]
-    status = (mo_status, mo_status_message[mo_status])
-    logger.debug(f"status_pkg: {status_pkg}")
-    logger.debug(f"mo_status: {mo_status}")
-    logger.debug(f"status: {status}")
-    last_message = rb.data_in
-    logger.debug(f"Last message received: {last_message}")
+    if rb.ring_indication[1] == "001" and rb.status[4] != 0:
+        logger.debug("Modem Terminated message available.")
+        logger.debug("Pulling data from the satellites.")
+        status_pkg = rb.satellite_transfer(ring=True)
+        mo_status = status_pkg[0]
+        status = (mo_status, mo_status_message[mo_status])
+        logger.debug(f"status_pkg: {status_pkg}")
+        logger.debug(f"mo_status: {mo_status}")
+        logger.debug(f"status: {status}")
+        last_message: bytes = rb.data_in
     ser.close()
+    return last_message
 
 def log_modem_info() -> None:
     rb, ser = init_rockblock()
@@ -77,9 +82,69 @@ def init_rockblock() -> Tuple[RockBlock, serial.Serial]:
         timeout=1,
     )
     rb = RockBlock(ser)
-    rb.reset()
+    rb.ring_alert = True
     return rb, ser
 
+def command_long_message(command_type: str, params: List[float]) -> Dict[str, Any]:
+    return {
+        "type": "COMMAND_LONG",
+        "param1": params[0] if len(params) > 0 else 0,
+        "param2": params[1] if len(params) > 1 else 0,
+        "param3": params[2] if len(params) > 2 else 0,
+        "param4": params[3] if len(params) > 3 else 0,
+        "param5": params[4] if len(params) > 4 else 0,
+        "param6": params[5] if len(params) > 5 else 0,
+        "param7": params[6] if len(params) > 6 else 0,
+        "command": {"type": command_type},
+        "target_system": 1,
+        "target_component": 1,
+        "confirmation": 0,
+    }
+
+def send_mavlink_message(message: Dict[str, Any]) -> None:
+    mavlink2rest_package = {
+        "header": {"system_id": 1, "component_id": 194, "sequence": 0},
+        "message": message,
+    }
+    requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
+
+def deal_with_income_data(income_data: bytes) -> None:
+    if income_data.decode().startswith("waypoint"):
+        _, lat, lon, wait_time, next_id = income_data.decode().split(":")
+        logger.info(f"Going to waypoint {lat}/{lon} and waiting there for {wait_time} minutes. Next waypoint will be {next_id}.")
+    if income_data.decode().startswith("output_rest_time"):
+        _, rest_time = income_data.decode().split(":")
+        logger.info(f"Setting data output rest time to {rest_time} seconds.")
+        global REST_TIME_DATA_OUT
+        REST_TIME_DATA_OUT = rest_time
+    if income_data.decode().startswith("input_rest_time"):
+        _, rest_time = income_data.decode().split(":")
+        logger.info(f"Setting data input rest time to {rest_time} seconds.")
+        global REST_TIME_DATA_IN
+        REST_TIME_DATA_IN = rest_time
+    if income_data.decode().startswith("set_mode"):
+        _, mode = income_data.decode().split(":")
+        logger.info(f"Setting autopilot mode to {mode}.")
+        message = command_long_message("MAV_CMD_DO_SET_MODE", [mode])
+        send_mavlink_message(message)
+    if income_data.decode().startswith("get_mode"):
+        logger.info("Sending autopilot mode to ground station.")
+        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/GLOBAL_POSITION_INT/message", timeout=5)
+        data = response.json()
+        mode = data["HEARTBEAT"]["message"]["base_mode"]["bits"]
+        message = {
+            'text': f'Autopilot mode: {mode}'.ljust(40, '\0').encode('ascii'),
+        }
+        unsent_data.append(serialize_message(message))
+        send_data_through_rockblock()
+    if income_data.decode().startswith("arm"):
+        logger.info("Arming vehicle.")
+        message = command_long_message("MAV_CMD_COMPONENT_ARM_DISARM", [1])
+        send_mavlink_message(message)
+    if income_data.decode().startswith("disarm"):
+        logger.info("Disarming vehicle.")
+        message = command_long_message("MAV_CMD_COMPONENT_ARM_DISARM", [0])
+        send_mavlink_message(message)
 
 def gather_sensors_data():
     try:
@@ -235,7 +300,10 @@ async def main_data_in_loop():
     while True:
         try:
             logger.debug("Checking for incoming messages from the satellites.")
-            get_data_through_rockblock()
+            income_data = get_data_through_rockblock()
+            if income_data is not None:
+                logger.debug(f"Data received: {income_data}")
+                deal_with_income_data(income_data)
         except Exception as error:
             logger.exception(error)
         finally:
