@@ -72,7 +72,14 @@ def _serialize(content, name):
     for name, field, kind in definition['fields']:
         value = content[name]
         print(name, value, field)
-        value = value if 'f' in field else int(value)
+        if field == "H":
+            value = int(value)
+            value = max(0, value)
+            value = min(65535, value)
+        elif field == "B":
+            value = int(value)
+            value = max(0, value)
+            value = min(255, value)
         data += [pack(ENDIAN + field, value)]
     return b''.join(data)
 
