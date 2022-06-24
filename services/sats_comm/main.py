@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import argparse
 import asyncio
 import math
 from typing import Tuple
@@ -10,6 +11,11 @@ from loguru import logger
 from adafruit_rockblock import RockBlock, mo_status_message
 
 from messages import serialize
+
+parser = argparse.ArgumentParser(description="Satellite communication service")
+parser.add_argument("--serial", type=str, help="Serial port", required=True)
+
+args = parser.parse_args()
 
 REST_TIME_DATA_OUT = 1800
 REST_TIME_DATA_IN = 10
@@ -63,7 +69,7 @@ def log_modem_info() -> None:
 
 def init_rockblock() -> Tuple[RockBlock, serial.Serial]:
     ser = serial.Serial(
-        "/dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.1:1.0-port0",
+        args.serial,
         baudrate=19200,
         bytesize=8,
         parity="N",
