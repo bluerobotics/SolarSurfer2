@@ -43,25 +43,48 @@ def data_gathering(service_name: str, url: str, timeout: int = 5) -> dict:
     return data
 
 
-def mock_data_gathering(*_unused) -> dict:
+def mock_data_gathering(service_name: str, *_unused) -> dict:
     """ Creates random data in some arbitraty format, used as a mock of data_gathering(). """
     import uuid
     import random
+    import json
     from datetime import datetime, timezone
-    return flatten_dict({
-        'timestamp': datetime.now(tz=timezone.utc),
-        'some_string': str(uuid.uuid4().hex),
-        'some_float': float(random.uniform(-1, 1)),
-        'some_bool': bool(random.uniform(-1, 1) > 0),
-        'some_nested': {
-            'float': float(random.uniform(-1, 1)),
-            'bool': bool(random.uniform(-1, 1) > 0),
-        },
-        'some_list': ['a', 'b', 'c', 'd'],
-        'some_integer': int(random.randint(0, 255)),
-        'some_non_ascci': str(
-            ','.join([(chr(random.randint(8000, 9000))) for _ in range(32)])),
-    })
+
+    data = {}
+    pwd = os.path.dirname(__file__)
+
+    if service_name == 'Weather Station':
+        data = json.load(
+            open(f"{pwd}/sample_data/sample_weatherstation_request.json"))
+    elif service_name == 'Victron Energy MPPT':
+        data = json.load(
+            open(f"{pwd}/sample_data/sample_vctron_energy_mppt_request.json"))
+
+    elif service_name == 'Autopilot mavlink messages':
+        data = json.load(
+            open(f"{pwd}/sample_data/sample_mavlink_request.json"))
+
+    elif service_name == 'System Information':
+        data = json.load(
+            open(f"{pwd}/sample_data/sample_system_information_request.json"))
+
+    else:
+        data = {
+            'timestamp': datetime.now(tz=timezone.utc),
+            'some_string': str(uuid.uuid4().hex),
+            'some_float': float(random.uniform(-1, 1)),
+            'some_bool': bool(random.uniform(-1, 1) > 0),
+            'some_nested': {
+                'float': float(random.uniform(-1, 1)),
+                'bool': bool(random.uniform(-1, 1) > 0),
+            },
+            'some_list': ['a', 'b', 'c', 'd'],
+            'some_integer': int(random.randint(0, 255)),
+            'some_non_ascci': str(
+                ','.join([(chr(random.randint(8000, 9000))) for _ in range(32)])),
+        }
+
+    return flatten_dict(data)
 
 
 def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, request_interval: timedelta, service_name: str, url: str, timeout: int = 5, filter: Callable[[dict], dict] = None):
