@@ -9,7 +9,7 @@ from adafruit_rockblock import RockBlock, mo_status_message
 
 from messages import serialize
 
-REST_TIME = 600
+REST_TIME = 1800
 unsent_data = []
 
 def send_data_through_rockblock():
