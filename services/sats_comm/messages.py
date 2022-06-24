@@ -2,6 +2,7 @@
 
 from struct import pack, unpack, calcsize
 from collections import namedtuple
+from loguru import logger
 
 START = '$'
 ENDIAN = '<'
@@ -60,26 +61,34 @@ MESSAGES = {
     },
 }
 
+
 def get_header(name):
     return (START + chr(MESSAGES[name]['id'])).encode('ascii')
 
+
 def get_struct_format(name):
     return ENDIAN + ''.join([f[1] for f in MESSAGES[name]['fields']])
+
+
+def _saturate(val: int, minimum: int, maximum: int) -> int:
+    if val < minimum:
+        logger.warning(f"Value {val} out of bounds, saturated to {minimum}")
+        val = minimum
+    elif val > maximum:
+        logger.warning(f"Value {val} out of bounds, saturated to {maximum}")
+        val = maximum
+    return val
 
 def _serialize(content, name):
     definition = MESSAGES[name]
     data = []
     for name, field, kind in definition['fields']:
         value = content[name]
-        print(name, value, field)
+        logger.trace(name, value, field)
         if field == "H":
-            value = int(value)
-            value = max(0, value)
-            value = min(65535, value)
+            value = int(_saturate(value, 0, 65535))
         elif field == "B":
-            value = int(value)
-            value = max(0, value)
-            value = min(255, value)
+            value = int(_saturate(value, 0, 255))
         data += [pack(ENDIAN + field, value)]
     return b''.join(data)
 
