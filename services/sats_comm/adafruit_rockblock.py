@@ -154,13 +154,19 @@ class RockBlock:
     def text_in(self, text):
         self.data_in = text
 
-    def satellite_transfer(self, location=None):
+    def satellite_transfer(self, location=None, ring=False):
         """Initiate a Short Burst Data transfer with satellites."""
         status = (None,) * 6
-        if location:
-            resp = self._uart_xfer("+SBDIX=" + location)
+        if ring:
+            if location:
+                resp = self._uart_xfer("+SBDIXA=" + location)
+            else:
+                resp = self._uart_xfer("+SBDIXA")
         else:
-            resp = self._uart_xfer("+SBDIX")
+            if location:
+                resp = self._uart_xfer("+SBDIX=" + location)
+            else:
+                resp = self._uart_xfer("+SBDIX")
         if resp[-1].strip().decode() == "OK":
             status = resp[-3].strip().decode().split(":")[1]
             status = [int(s) for s in status.split(",")]
