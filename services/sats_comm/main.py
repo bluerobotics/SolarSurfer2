@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 
+import asyncio
 import math
+from typing import Tuple
 import requests
 import serial
 import time
@@ -9,21 +11,12 @@ from adafruit_rockblock import RockBlock, mo_status_message
 
 from messages import serialize
 
-REST_TIME = 1800
+REST_TIME_DATA_OUT = 1800
+REST_TIME_DATA_IN = 10
 unsent_data = []
 
 def send_data_through_rockblock():
-    # Connect to the Rockblock modem
-    ser = serial.Serial(
-        "/dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.1:1.0-port0",
-        baudrate=19200,
-        bytesize=8,
-        parity="N",
-        stopbits=1,
-        timeout=1,
-    )
-    rb = RockBlock(ser)
-    rb.reset()
+    rb, ser = init_rockblock()
 
     for data_package in reversed(unsent_data):
         logger.debug(f"Trying to send data package: {data_package}.")
@@ -43,6 +36,43 @@ def send_data_through_rockblock():
             time.sleep(0.1)
             retries += 1
     ser.close()
+
+def get_data_through_rockblock() -> None:
+    rb, ser = init_rockblock()
+    logger.debug(f"Status: {rb.status}")
+    logger.debug(f"Ring Alert mode: {rb.ring_alert}")
+    logger.debug(f"Ring Alert status: {rb.ring_indication}")
+    status_pkg = rb.satellite_transfer()
+    mo_status = status_pkg[0]
+    status = (mo_status, mo_status_message[mo_status])
+    logger.debug(f"status_pkg: {status_pkg}")
+    logger.debug(f"mo_status: {mo_status}")
+    logger.debug(f"status: {status}")
+    last_message = rb.data_in
+    logger.debug(f"Last message received: {last_message}")
+    ser.close()
+
+def log_modem_info() -> None:
+    rb, ser = init_rockblock()
+    logger.debug("Modem information:")
+    logger.debug(f"Model: {rb.model}")
+    logger.debug(f"Revision: {rb.revision}")
+    logger.debug(f"Serial number: {rb.serial_number}")
+    logger.debug(f"Status: {rb.status}")
+    ser.close()
+
+def init_rockblock() -> Tuple[RockBlock, serial.Serial]:
+    ser = serial.Serial(
+        "/dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.1:1.0-port0",
+        baudrate=19200,
+        bytesize=8,
+        parity="N",
+        stopbits=1,
+        timeout=1,
+    )
+    rb = RockBlock(ser)
+    rb.reset()
+    return rb, ser
 
 
 def gather_sensors_data():
@@ -137,7 +167,7 @@ def gather_sensors_data():
         logger.error(f"Failed fetching autopilot motor data. {error=}")
 
     try:
-        mission_status = "undefined"
+        mission_status = 0
         response = requests.get("http://127.0.0.1:9992/data", timeout=5)
         data = response.json()
         mission_status = data["mission_status"]
@@ -178,27 +208,49 @@ def gather_sensors_data():
     return serialize(global_message)
 
 
-def main():
+async def main_data_out_loop():
     while True:
         try:
+            logger.debug("Gattering data from payloads.")
             new_data = gather_sensors_data()
 
             logger.debug(f"Storing gathered data on memory persistency: {new_data}")
             unsent_data.append(new_data)
 
-            logger.debug("Trying talking to the satellites...")
-
+            logger.debug("Trying to send gathered data through satellites.")
             send_data_through_rockblock()
-            # send_new_data_through_swarm()
-
         except Exception as error:
             logger.exception(error)
         finally:
-            logger.debug(f"Resting for a moment ({REST_TIME} seconds) before next data transmission.")
-            time.sleep(REST_TIME)
+            logger.debug(f"Resting for a moment ({REST_TIME_DATA_OUT} seconds) before next data transmission.")
+            await asyncio.sleep(REST_TIME_DATA_OUT)
+
+async def main_data_in_loop():
+    while True:
+        try:
+            logger.debug("Checking for incoming messages from the satellites.")
+            get_data_through_rockblock()
+        except Exception as error:
+            logger.exception(error)
+        finally:
+            logger.debug(f"Resting for a moment ({REST_TIME_DATA_IN} seconds) before checking for new incoming messages.")
+            await asyncio.sleep(REST_TIME_DATA_IN)
 
 if __name__ == "__main__":
-    # Wait a minute for the sensors to boot before starting regular routine
-    logger.debug("Waiting for sensors to get online.")
-    time.sleep(60)
-    main()
+    while True:
+        try:
+            # Wait a minute for the sensors to boot before starting regular routine
+            logger.debug("Waiting for sensors to get online.")
+            time.sleep(60)
+
+            # Log information about the satellite modem
+            log_modem_info()
+
+            # Main data in and data out loops
+            loop = asyncio.new_event_loop()
+            loop.create_task(main_data_in_loop())
+            loop.create_task(main_data_out_loop())
+            loop.run_forever()
+        except Exception as e:
+            logger.error("Exception in the main loop. Restarting.")
+            logger.exception(e)
