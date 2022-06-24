@@ -2,6 +2,9 @@
 
 from datetime import datetime, timezone, timedelta
 from logging import exception
+import os
+import sys
+import time
 
 
 class DataLogger(object):
@@ -10,7 +13,8 @@ class DataLogger(object):
                  filename_datetime_format='%Y-%m-%d_%H%M%S',
                  filename_prefix: str = 'log_',
                  csv_separator: str = ',',
-                 file_encoding='utf-8'):
+                 file_encoding='utf-8',
+                 file_buffer_size: int = 60):
         self.header = header
         self.file_creation_interval = newfile_interval
         self.output = output_dir
@@ -21,19 +25,22 @@ class DataLogger(object):
         self._filename_prefix = filename_prefix
         self._separator = csv_separator
         self._encoding = file_encoding
+        self._file_buffer_size = file_buffer_size
 
         self._filename = None
         self._file = None
         self._file_creation_time = None
 
     def __enter__(self):
-        self._create_new_file()
+        self.new_file()
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        self._file.close()
+        self._close_file()
 
-    def _create_new_file(self):
+    def new_file(self):
+        """ Closes the current log file and continue to log into a new one. """
+
         def _write_header_to_file(self):
             header = self._separator.join(self.header) + '\n'
 
@@ -41,7 +48,7 @@ class DataLogger(object):
                 header = self._separator.join(
                     ['datalogger_datetime', 'datalogger_timestamp']) + self._separator + header
 
-            self._file.write(header)
+            self._write_to_file(header)
 
         def _generate_new_filename_string(self):
             filename_dir = self.output
@@ -50,21 +57,41 @@ class DataLogger(object):
                 tz=timezone.utc).strftime(self._filename_datetime_format)
             self._filename = f"{filename_dir}/{filename_prefix}{filename_date}.csv"
 
-        _generate_new_filename_string(self)
-        self._file_creation_time = datetime.now(tz=timezone.utc)
-        try:
-            self._file = open(self._filename, mode='x',
-                              encoding=self._encoding)
-        except FileExistsError:
-            self._file = open(self._filename, mode='a',
-                              encoding=self._encoding)
-            return
-        _write_header_to_file(self)  # only writes header if it is a new file
+        while True:  # Always try to create a new file
+            try:
+                if self._file is not None:
+                    self._close_file()
+                _generate_new_filename_string(self)
+                self._file_creation_time = datetime.now(tz=timezone.utc)
+                self._file = open(self._filename, mode='x',
+                                  encoding=self._encoding, buffering=self._file_buffer_size)
+            except FileNotFoundError as error:
+                path = os.path.realpath(self._filename)
+                print(
+                    f"Error when trying to create file {self._filename}. The directory {path} probably doesn't exist. The directory will be created and a new attempt will be made in one second. {error=}", file=sys.stderr)
+                os.makedirs(path, exist_ok=False)
+                time.sleep(1)
+                continue
+            except Exception as error:
+                print(
+                    f"Error when trying to create file {self._filename}. A new attempt will be made in one second. {error=}", file=sys.stderr)
+                time.sleep(1)
+                continue
 
-    def new_file(self):
-        """ Closes the current log file and continue to log into a new one. """
+            _write_header_to_file(self)
+            break
+
+    def _write_to_file(self, line):
+        try:
+            self._file.write(line)
+        except Exception as error:
+            print(
+                f"Error when trying to write to file {self._filename}. A new file will be created. {error=}", file=sys.stderr)
+            self.new_file()
+            self._write_to_file(line)
+
+    def _close_file(self):
         self._file.close()
-        self._create_new_file()
 
     def log(self, data: dict):
         """ Logs the given data to the current log file. """
@@ -85,7 +112,7 @@ class DataLogger(object):
             line = self._separator.join(
                 ['"' + datetimestr + '"', '"' + timestampstr + '"']) + self._separator + line
 
-        self._file.write(line)
+        self._write_to_file(line)
 
 
 def _example():
