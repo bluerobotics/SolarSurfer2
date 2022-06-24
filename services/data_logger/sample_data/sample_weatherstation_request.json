@@ -1,0 +1,31 @@
+{
+    "MDA": {
+        "b_pressure_inch": "29.7101",
+        "inches": "I",
+        "b_pressure_bar": "1.0061",
+        "bars": "B",
+        "air_temp": "20.8",
+        "a_celsius": "C",
+        "water_temp": "",
+        "w_celsius": "",
+        "rel_humidity": "",
+        "abs_humidity": "",
+        "dew_point": "",
+        "d_celsius": "",
+        "direction_true": "",
+        "true": "",
+        "direction_magnetic": "",
+        "magnetic": "",
+        "wind_speed_knots": "",
+        "knots": "",
+        "wind_speed_meters": "",
+        "meters": ""
+    },
+    "MWV": {
+        "wind_angle": "72.1",
+        "reference": "R",
+        "wind_speed": "1.5",
+        "wind_speed_units": "N",
+        "status": "A"
+    }
+}
