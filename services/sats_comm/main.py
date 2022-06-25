@@ -174,7 +174,7 @@ def deal_with_income_data(income_data: bytes) -> None:
         logger.info(f"Setting {param_name} to {value}")
         message = {
             "type": "PARAM_SET",
-            "param_value": value,
+            "param_value": float(value),
             "target_system": 1,
             "target_component": 1,
             "param_id": [
