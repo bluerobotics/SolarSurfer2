@@ -254,9 +254,9 @@ def gather_sensors_data():
 
     try:
         mission_status = 0
-        response = requests.get("http://127.0.0.1:9992/data", timeout=5)
-        data = response.json()
-        mission_status = data["mission_status"]
+        #response = requests.get("http://127.0.0.1:9992/data", timeout=5)
+        #data = response.json()
+        #mission_status = data["mission_status"]
     except Exception as error:
         logger.exception(f"Failed fetching autopilot motor data. {error=}")
 
