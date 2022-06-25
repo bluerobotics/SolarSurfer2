@@ -66,7 +66,7 @@ class DataLogger(object):
                 self._file = open(self._filename, mode='x',
                                   encoding=self._encoding, buffering=self._file_buffer_size)
             except FileNotFoundError as error:
-                path = os.path.realpath(self._filename)
+                path = os.path.dirname(os.path.realpath(self._filename))
                 print(
                     f"Error when trying to create file {self._filename}. The directory {path} probably doesn't exist. The directory will be created and a new attempt will be made in one second. {error=}", file=sys.stderr)
                 os.makedirs(path, exist_ok=False)
