@@ -134,7 +134,7 @@ def deserialize_control(data):
     return _deserialize(data, 'control')
 
 def deserialize_message(data):
-    return _deserialize(data, 'message')
+    return get_header(data['message']) + _deserialize(data, 'message')
 
 
 if __name__ == "__main__":
