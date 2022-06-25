@@ -15,7 +15,7 @@ MAV_COMPONENT_ID_ONBOARD_COMPUTER4=194
 
 
 SERVICES=(
-    'weatherstation100wx',"$SERVICES_PATH/weatherstation100wx/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2.2:1.0-port0 --loguru-output-dir $LOGS_PATH/weatherstation100wx --verbosity DEBUG"
+    #'weatherstation100wx',"$SERVICES_PATH/weatherstation100wx/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2.2:1.0-port0 --loguru-output-dir $LOGS_PATH/weatherstation100wx --verbosity DEBUG"
     'victron-energy-mppt',"$SERVICES_PATH/victron-energy-mppt/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2.4.1:1.0-port0 --loguru-output-dir $LOGS_PATH/victron-energy-mppt --verbosity DEBUG"
     'sats_comm',"$SERVICES_PATH/sats_comm/main.py --serial /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.1:1.0-port0 --loguru-output-dir $LOGS_PATH/sats_comm --verbosity DEBUG"
     'data_logger',"$SERVICES_PATH/data_logger/main.py --datalog-output-dir $LOGS_PATH/data --services-request-interval '00:00:01' --datalog-newfile-interval '24:00:00' --loguru-output-dir=$LOGS_PATH/data_logger --verbosity DEBUG"
