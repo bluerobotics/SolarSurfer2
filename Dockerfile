@@ -1,10 +1,25 @@
-FROM python:3.9-slim-buster
+FROM python:3.9-slim-bullseye
 
 # Create default user folder
 RUN mkdir -p /home/pi
 
-RUN apt update && apt install -y nano screen curl
+# Install some useful tools
+RUN apt update && apt install -y --no-install-recommends \
+    curl \
+    dnsutils \
+    file \
+    htop \
+    iproute2 \
+    iputils-ping \
+    less \
+    lsof \
+    nano \
+    rsync \
+    screen \
+    tree \
+    xclip
 
+# Install stuff necessary to run the scripts
 COPY install-necessary-stuff.sh /
 RUN ./install-necessary-stuff.sh
 
