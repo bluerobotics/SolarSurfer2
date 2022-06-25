@@ -134,8 +134,7 @@ def main(args: argparse.Namespace):
     tasks = []
 
     for service in [
-        {'service_name': 'Weather Station',
-         'url': 'http://127.0.0.1:9990/data'},
+        #{'service_name': 'Weather Station', 'url': 'http://127.0.0.1:9990/data'},
         {'service_name': 'Victron Energy MPPT',
          'url': 'http://127.0.0.1:9991/data'},
         # This saves all mavlink messages in the same file
