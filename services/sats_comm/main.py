@@ -121,6 +121,7 @@ def send_mavlink_message(message: Dict[str, Any]) -> None:
         "header": {"system_id": 255, "component_id": 240, "sequence": 0},
         "message": message,
     }
+    print(mavlink2rest_package)
     requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
 
 def deal_with_income_data(income_data: bytes) -> None:
@@ -170,7 +171,7 @@ def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("set_param"):
         logger.info("Got set_param")
         _, param_name, value = income_data.decode().split(":")
-        logger.info("Setting {param_name} to {value}")
+        logger.info(f"Setting {param_name} to {value}")
         message = {
             "type": "PARAM_SET",
             "param_value": value,
