@@ -16,7 +16,8 @@ RUN apt update && apt install -y --no-install-recommends \
     nano \
     rsync \
     screen \
-    tree
+    tree \
+    xclip
 
 # Install stuff necessary to run the scripts
 COPY install-necessary-stuff.sh /
