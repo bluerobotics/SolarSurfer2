@@ -140,7 +140,16 @@ def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("set_mode"):
         _, mode = income_data.decode().split(":")
         logger.info(f"Setting autopilot mode to {mode}.")
-        message = command_long_message("MAV_CMD_DO_SET_MODE", [mode])
+        if mode == "manual":
+            message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 0])
+        if mode == "auto":
+            message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 10])
+        if mode == "smart_rtl":
+            message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 12])
+        if mode == "guided":
+            message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 15])
+        else:
+            message = command_long_message("MAV_CMD_DO_SET_MODE", [mode])
         send_mavlink_message(message)
     if income_data.decode().startswith("get_mode"):
         logger.info("Sending autopilot mode to ground station.")
