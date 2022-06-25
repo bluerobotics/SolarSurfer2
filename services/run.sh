@@ -6,7 +6,7 @@ set -e
 SOLAR_SURFER2=/home/pi
 SERVICES_PATH=$SOLAR_SURFER2/services
 TOOLS_PATH=$SOLAR_SURFER2/tools
-LOGS_PATH=/var/log/solarsurfer
+LOGS_PATH=/var/logs/blueos/solarsurfer
 
 # MAVLink configuration
 MAV_SYSTEM_ID=1
