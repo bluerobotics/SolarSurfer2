@@ -13,7 +13,22 @@ from adafruit_rockblock import RockBlock, mo_status_message
 
 from messages import serialize, serialize_message
 
-parser = argparse.ArgumentParser(description="Satellite communication service")
+class LoguruLevelArgumentValidator(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        """ Parse loguru log levels """
+        levels = ["TRACE", "DEBUG", "INFO",
+                  "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
+        if values not in levels:
+            raise argparse.ArgumentTypeError(
+                f"Wrong log level passed, available: {levels}.")
+        setattr(namespace, self.dest, values)
+
+parser = argparse.ArgumentParser(description="Sattelite Communication Service", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+parser.add_argument("--loguru-output-dir", type=str, default=".",
+                    help="Configure loguru output dir.")
+parser.add_argument("-v", "--verbosity", dest="verbosity", type=str, action=LoguruLevelArgumentValidator, default="INFO",
+                    help="Configure loguru verbosity level: TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL.")
 parser.add_argument("--serial", type=str, help="Serial port", required=True)
 
 args = parser.parse_args()
@@ -311,30 +326,6 @@ async def main_data_in_loop():
             logger.debug(f"Resting for a moment ({REST_TIME_DATA_IN} seconds) before checking for new incoming messages.")
             await asyncio.sleep(REST_TIME_DATA_IN)
 
-
-class LoguruLevelArgumentValidator(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        """ Parse loguru log levels """
-        levels = ["TRACE", "DEBUG", "INFO",
-                  "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
-        if values not in levels:
-            raise argparse.ArgumentTypeError(
-                f"Wrong log level passed, available: {levels}.")
-        setattr(namespace, self.dest, values)
-
-
-def get_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Sattelite Communication Service", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument("--loguru-output-dir", type=str, default=".",
-                        help="Configure loguru output dir.")
-    parser.add_argument("-v", "--verbosity", dest="verbosity", type=str, action=LoguruLevelArgumentValidator, default="INFO",
-                        help="Configure loguru verbosity level: TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL.")
-
-    return parser.parse_args()
-
-
 def configure_logging(args: argparse.Namespace):
     loguru_output_file = args.loguru_output_dir + \
         "/loguru_datalogger_{time}.log"
@@ -346,7 +337,6 @@ def configure_logging(args: argparse.Namespace):
 
 
 if __name__ == "__main__":
-    args = get_arguments()
     configure_logging(args)
     while True:
         try:
@@ -360,7 +350,7 @@ if __name__ == "__main__":
 
             # Main data in and data out loops
             loop = asyncio.new_event_loop()
-            loop.create_task(main_data_in_loop(args))
+            loop.create_task(main_data_in_loop())
             loop.create_task(main_data_out_loop(args))
             loop.run_forever()
         except Exception as e:
