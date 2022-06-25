@@ -147,7 +147,7 @@ def deal_with_income_data(income_data: bytes) -> None:
         response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/HEARTBEAT/message", timeout=5)
         data = response.json()
         mode = data["base_mode"]["bits"]
-        message = f'text:Autopilot mode: {mode}'.encode('ascii'),
+        message = f'text:Autopilot mode: {mode}'.encode('ascii')
         unsent_data.append(message)
         send_data_through_rockblock()
     if income_data.decode().startswith("arm"):
