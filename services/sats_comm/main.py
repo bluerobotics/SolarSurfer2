@@ -167,12 +167,12 @@ def gather_sensors_data():
         wind_speed = -1
         air_pressure_bar = -1
         air_temp = -1
-        response = requests.get("http://127.0.0.1:9990/data", timeout=5)
-        data = response.json()
-        wind_angle = float(data["MWV"]["wind_angle"])
-        wind_speed = float(data["MWV"]["wind_speed"])
-        air_pressure_bar = float(data["MDA"]["b_pressure_bar"])
-        air_temp = float(data["MDA"]["air_temp"])
+        #response = requests.get("http://127.0.0.1:9990/data", timeout=5)
+        #data = response.json()
+        #wind_angle = float(data["MWV"]["wind_angle"])
+        #wind_speed = float(data["MWV"]["wind_speed"])
+        #air_pressure_bar = float(data["MDA"]["b_pressure_bar"])
+        #air_temp = float(data["MDA"]["air_temp"])
     except Exception as error:
         logger.exception(f"Failed fetching weather data. {error=}")
 
