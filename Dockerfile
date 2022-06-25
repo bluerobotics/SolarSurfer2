@@ -18,7 +18,6 @@ RUN apt update && apt install -y --no-install-recommends \
     screen \
     tree
 
-
 # Install stuff necessary to run the scripts
 COPY install-necessary-stuff.sh /
 RUN ./install-necessary-stuff.sh
