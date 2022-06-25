@@ -131,12 +131,12 @@ def deal_with_income_data(income_data: bytes) -> None:
         _, rest_time = income_data.decode().split(":")
         logger.info(f"Setting data output rest time to {rest_time} seconds.")
         global REST_TIME_DATA_OUT
-        REST_TIME_DATA_OUT = rest_time
+        REST_TIME_DATA_OUT = int(rest_time)
     if income_data.decode().startswith("input_rest_time"):
         _, rest_time = income_data.decode().split(":")
         logger.info(f"Setting data input rest time to {rest_time} seconds.")
         global REST_TIME_DATA_IN
-        REST_TIME_DATA_IN = rest_time
+        REST_TIME_DATA_IN = int(rest_time)
     if income_data.decode().startswith("set_mode"):
         _, mode = income_data.decode().split(":")
         logger.info(f"Setting autopilot mode to {mode}.")
