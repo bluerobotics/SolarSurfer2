@@ -9,7 +9,7 @@ import argparse
 from loguru import logger
 import threading
 from datetime import timedelta
-from typing import Callable
+from typing import Callable, Optional
 
 from data_logger import DataLogger
 
@@ -30,20 +30,23 @@ def flatten_dict(dictionary: dict, parent_key: bool = False, separator: str = '.
     return dict(items)
 
 
-def data_gathering(service_name: str, url: str, timeout: int = 5) -> dict:
+def data_gathering(service_name: str, url: str, timeout: int, filter: Optional[Callable[[dict], dict]]) -> dict:
     """ Gathers data from the given url using a GET request. """
     data = None
     try:
         response = requests.get(url, timeout=timeout)
         if response.status_code == 200 and response.text != 'None':
-            data = flatten_dict(response.json())
+            data = response.json()
+            if filter is not None:
+                data = filter(data)
+            data = flatten_dict(data)
     except Exception as error:
         logger.exception(f"Failed fetching {service_name} data. {error=}")
 
     return data
 
 
-def mock_data_gathering(service_name: str, *_unused) -> dict:
+def mock_data_gathering(service_name: str, url: str, timeout: int, filter: Optional[Callable[[dict], dict]]) -> dict:
     """ Creates random data in some arbitraty format, used as a mock of data_gathering(). """
     import uuid
     import random
@@ -58,7 +61,7 @@ def mock_data_gathering(service_name: str, *_unused) -> dict:
             open(f"{pwd}/sample_data/sample_weatherstation_request.json"))
     elif service_name == 'Victron Energy MPPT':
         data = json.load(
-            open(f"{pwd}/sample_data/sample_vctron_energy_mppt_request.json"))
+            open(f"{pwd}/sample_data/sample_victron_energy_mppt_request.json"))
 
     elif service_name == 'Autopilot mavlink messages':
         data = json.load(
@@ -84,22 +87,19 @@ def mock_data_gathering(service_name: str, *_unused) -> dict:
                 ','.join([(chr(random.randint(8000, 9000))) for _ in range(32)])),
         }
 
+    if filter:
+        data = filter(data)
     return flatten_dict(data)
 
 
-def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, request_interval: timedelta, service_name: str, url: str, timeout: int = 5, filter: Callable[[dict], dict] = None):
+def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, request_interval: timedelta, service_name: str, url: str, timeout: int = 5, filter: Optional[Callable[[dict], dict]] = None):
     """ This function uses the DataLogger class to log any json data gathered
      from any given url, storing to a specific csv datalog file stored in
      `output_dir. This csv file is periodicly being rotated as specified in
      `newfile_interval`. """
     keys = []
     while len(keys) == 0:
-        data = data_gathering(service_name, url, timeout)
-        if filter is not None and isinstance(data, dict):
-            try:
-                data = filter(data)
-            except Exception as e:
-                logger.exception(e)
+        data = data_gathering(service_name, url, timeout, filter)
 
         if isinstance(data, dict):
             keys = data.keys()
@@ -109,12 +109,7 @@ def generic_api_data_logger(newfile_interval: timedelta, output_dir: str, reques
     filename_prefix = 'log_' + service_name.replace(' ', '_').lower() + '_'
     with DataLogger(keys, newfile_interval=newfile_interval, output_dir=output_dir, log_with_timestamp=True, filename_prefix=filename_prefix) as datalogger:
         while True:
-            data = data_gathering(service_name, url, timeout)
-            if filter is not None:
-                try:
-                    data = filter(data)
-                except Exception as e:
-                    logger.exception(e)
+            data = data_gathering(service_name, url, timeout, filter)
 
             logger.trace(
                 f"{service_name}'s DataLogger (\"{datalogger._filename}\"). {data=}")
