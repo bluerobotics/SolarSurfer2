@@ -118,7 +118,7 @@ def command_long_message(command_type: str, params: List[float]) -> Dict[str, An
 
 def send_mavlink_message(message: Dict[str, Any]) -> None:
     mavlink2rest_package = {
-        "header": {"system_id": 1, "component_id": 194, "sequence": 0},
+        "header": {"system_id": 255, "component_id": 194, "sequence": 0},
         "message": message,
     }
     requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
