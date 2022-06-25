@@ -144,7 +144,7 @@ def deal_with_income_data(income_data: bytes) -> None:
         send_mavlink_message(message)
     if income_data.decode().startswith("get_mode"):
         logger.info("Sending autopilot mode to ground station.")
-        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/GLOBAL_POSITION_INT/message", timeout=5)
+        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/HEARTBEAT/message", timeout=5)
         data = response.json()
         mode = data["HEARTBEAT"]["message"]["base_mode"]["bits"]
         message = {
