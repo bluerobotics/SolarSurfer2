@@ -146,11 +146,9 @@ def deal_with_income_data(income_data: bytes) -> None:
         logger.info("Sending autopilot mode to ground station.")
         response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/HEARTBEAT/message", timeout=5)
         data = response.json()
-        mode = data["HEARTBEAT"]["message"]["base_mode"]["bits"]
-        message = {
-            'text': f'Autopilot mode: {mode}'.ljust(40, '\0').encode('ascii'),
-        }
-        unsent_data.append(serialize_message(message))
+        mode = data["base_mode"]["bits"]
+        message = f'text:Autopilot mode: {mode}'.encode('ascii'),
+        unsent_data.append(message)
         send_data_through_rockblock()
     if income_data.decode().startswith("arm"):
         logger.info("Arming vehicle.")
@@ -159,6 +157,42 @@ def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("disarm"):
         logger.info("Disarming vehicle.")
         message = command_long_message("MAV_CMD_COMPONENT_ARM_DISARM", [0])
+        send_mavlink_message(message)
+    if income_data.decode().startswith("set_param"):
+        logger.info("Got set_param")
+        _, param_name, value = income_data.decode().split(":")
+
+        message = {
+            "type": "PARAM_SET",
+            "param_value": value,
+            "target_system": 1,
+            "target_component": 1,
+            "param_id": [
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000",
+                "\u0000"
+            ],
+            "param_type": {
+                "type": "MAV_PARAM_TYPE_REAL32"
+            }
+        }
+
+        for i, char in enumerate(param_name):
+            message["param_id"][i] = char
+
         send_mavlink_message(message)
 
 def gather_sensors_data():
