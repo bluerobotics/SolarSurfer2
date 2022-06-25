@@ -118,7 +118,7 @@ def command_long_message(command_type: str, params: List[float]) -> Dict[str, An
 
 def send_mavlink_message(message: Dict[str, Any]) -> None:
     mavlink2rest_package = {
-        "header": {"system_id": 255, "component_id": 194, "sequence": 0},
+        "header": {"system_id": 255, "component_id": 240, "sequence": 0},
         "message": message,
     }
     requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
@@ -142,11 +142,11 @@ def deal_with_income_data(income_data: bytes) -> None:
         logger.info(f"Setting autopilot mode to {mode}.")
         if mode == "manual":
             message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 0])
-        if mode == "auto":
+        elif mode == "auto":
             message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 10])
-        if mode == "smart_rtl":
+        elif mode == "smart_rtl":
             message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 12])
-        if mode == "guided":
+        elif mode == "guided":
             message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 15])
         else:
             message = command_long_message("MAV_CMD_DO_SET_MODE", [mode])
@@ -170,7 +170,7 @@ def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("set_param"):
         logger.info("Got set_param")
         _, param_name, value = income_data.decode().split(":")
-
+        logger.info("Setting {param_name} to {value}")
         message = {
             "type": "PARAM_SET",
             "param_value": value,
