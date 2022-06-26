@@ -27,8 +27,6 @@ MESSAGES = {
             ('raspberry_temp', 'B', '128celsius/256'),
             ('raspberry_volt', 'B', '10volts/256'),
             ('mission_status', 'B', 'holding,running,drift,disarmed'),
-            ('wind_speed', 'B', '64meters/second'),
-            ('wind_angle', 'B', '360degree/256'),
             ('gps_fix_type', 'B', 'no gps/no fix/2d fix/3d fix'),
             ('sat_number', 'B', 'number'),
             ('lattitude', 'f', 'degrees'),
@@ -37,6 +35,8 @@ MESSAGES = {
             ('next_waypoint_longitude', 'f', 'degrees'),
             ('vdop', 'H', 'uin16_t'),
             ('hdop', 'H', 'uin16_t'),
+            ('time_boot_ms', 'f', 'ms'),
+            ('time_unix_usec', 'f', 'usec'),
         ],
     },
     'waypoint': {
