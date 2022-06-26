@@ -277,6 +277,28 @@ def gather_sensors_data():
         logger.exception(f"Failed fetching autopilot position data. {error=}")
 
     try:
+        sat_number = 0
+        vdop = -1
+        hdop = -1
+        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/GPS2_RAW/message", timeout=5)
+        data = response.json()
+        vdop = float(data["epv"])
+        hdop = float(data["eph"])
+        sat_number = float(data['satellites_visible'])
+    except Exception as error:
+        logger.exception(f"Failed fetching autopilot vh/dop data. {error=}")
+
+    try:
+        time_boot_ms = -1
+        time_unix_usec = -1
+        response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/SYSTEM_TIME/message", timeout=5)
+        data = response.json()
+        time_boot_ms = float(data["time_boot_ms"])
+        time_unix_usec = float(data["time_unix_usec"])
+    except Exception as error:
+        logger.exception(f"Failed fetching autopilot time data. {error=}")
+
+    try:
         water_temp = -1
         response = requests.get("http://127.0.0.1:6040/mavlink/vehicles/1/components/1/messages/SCALED_PRESSURE/message", timeout=5)
         data = response.json()
@@ -356,16 +378,16 @@ def gather_sensors_data():
         'raspberry_temp': 0,
         'raspberry_volt': 0,
         'mission_status': 0, #mission_status,
-        'wind_speed': wind_speed*255/64,
-        'wind_angle': wind_angle*255/360,
         'gps_fix_type': 255,
-        'sat_number': 255,
+        'sat_number': sat_number,
         'lattitude': gps_lat,
         'longitude': gps_lon,
         'next_waypoint_lattitude': 0,
         'next_waypoint_longitude': 0,
-        'vdop': 0,
-        'hdop': 0,
+        'vdop': vdop,
+        'hdop': hdop,
+        'time_boot_ms': time_boot_ms,
+        'time_unix_usec': time_unix_usec
     }
 
     return serialize(global_message)
