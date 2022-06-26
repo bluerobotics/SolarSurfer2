@@ -127,6 +127,40 @@ def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("waypoint"):
         _, lat, lon, wait_time, next_id = income_data.decode().split(":")
         logger.info(f"Going to waypoint {lat}/{lon} and waiting there for {wait_time} minutes. Next waypoint will be {next_id}.")
+
+        message = {
+            "type": "MISSION_ITEM_INT",
+            "param1": 0.0,
+            "param2": 0.0,
+            "param3": 0.0,
+            "param4": 0.0,
+            "x": float(lat)*1e7,
+            "y": float(lon)*1e7,
+            "z": 1.0,
+            "seq": 0,
+            "command": {
+                "type": "MAV_CMD_NAV_WAYPOINT"
+            },
+            "target_system": 1,
+            "target_component": 1,
+            "frame": {
+                "type": "MAV_FRAME_GLOBAL_INT"
+            },
+            "current": 2,
+            "autocontinue": 1,
+            "mission_type": {
+                "type": "MAV_MISSION_TYPE_MISSION"
+            }
+        }
+        send_mavlink_message(message)
+        message = {
+            "type": "MISSION_SET_CURRENT",
+            "seq": int(next_id),
+            "target_system": 1,
+            "target_component": 0
+        }
+        send_mavlink_message(message)
+
     if income_data.decode().startswith("output_rest_time"):
         _, rest_time = income_data.decode().split(":")
         logger.info(f"Setting data output rest time to {rest_time} seconds.")
