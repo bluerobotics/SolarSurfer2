@@ -121,7 +121,6 @@ def send_mavlink_message(message: Dict[str, Any]) -> None:
         "header": {"system_id": 255, "component_id": 240, "sequence": 0},
         "message": message,
     }
-    print(mavlink2rest_package)
     requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
 
 def deal_with_income_data(income_data: bytes) -> None:
