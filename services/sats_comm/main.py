@@ -41,20 +41,22 @@ def send_data_through_rockblock():
     rb, ser = init_rockblock()
 
     for data_package in reversed(unsent_data):
-        logger.debug(f"Trying to send data package: {data_package}.")
+        logger.info(f"Trying to send data package: {data_package}.")
         rb.data_out = data_package
         retries = 0
         max_retries = 10
         while retries < max_retries:
+            logger.debug(f"Retry {retries}.")
             status_pkg = rb.satellite_transfer()
             mo_status = status_pkg[0]
             status = (mo_status, mo_status_message[mo_status])
+            logger.debug(f"status_pkg: {status_pkg} // mo_status: {mo_status} // status: {status}")
             if mo_status <= 5:
-                logger.debug(f"Sucessfully sent message. Status: {status}.")
-                logger.debug("Removing gathered data from memory persistency.")
+                logger.success("Sucessfully sent message.")
+                logger.info("Removing gathered data from memory persistency.")
                 unsent_data.pop()
                 break
-            logger.debug(f"Failed sending message. Status: {status}. Retrying...")
+            logger.error("Failed sending message. Retrying...")
             time.sleep(0.1)
             retries += 1
     ser.close()
@@ -62,29 +64,24 @@ def send_data_through_rockblock():
 def get_data_through_rockblock() -> Optional[bytes]:
     last_message = None
     rb, ser = init_rockblock()
-    logger.debug(f"Status: {rb.status}")
-    logger.debug(f"Ring Alert mode: {rb.ring_alert}")
-    logger.debug(f"Ring Alert status: {rb.ring_indication}")
+    logger.debug(f"Status: {rb.status} // Ring Alert mode: {rb.ring_alert} // Ring Alert status: {rb.ring_indication}")
     if rb.ring_indication[1] == "001" and rb.status[4] != 0:
-        logger.debug("Modem Terminated message available.")
-        logger.debug("Pulling data from the satellites.")
+        logger.info("Modem Terminated message available. Pulling data from the satellites.")
         status_pkg = rb.satellite_transfer(ring=True)
         mo_status = status_pkg[0]
         status = (mo_status, mo_status_message[mo_status])
-        logger.debug(f"status_pkg: {status_pkg}")
-        logger.debug(f"mo_status: {mo_status}")
-        logger.debug(f"status: {status}")
+        logger.debug(f"status_pkg: {status_pkg} // mo_status: {mo_status} // status: {status}")
         last_message: bytes = rb.data_in
     ser.close()
     return last_message
 
 def log_modem_info() -> None:
     rb, ser = init_rockblock()
-    logger.debug("Modem information:")
-    logger.debug(f"Model: {rb.model}")
-    logger.debug(f"Revision: {rb.revision}")
-    logger.debug(f"Serial number: {rb.serial_number}")
-    logger.debug(f"Status: {rb.status}")
+    logger.info("Modem information:")
+    logger.info(f"Model: {rb.model}")
+    logger.info(f"Revision: {rb.revision}")
+    logger.info(f"Serial number: {rb.serial_number}")
+    logger.info(f"Status: {rb.status}")
     ser.close()
 
 def init_rockblock() -> Tuple[RockBlock, serial.Serial]:
@@ -202,9 +199,8 @@ def deal_with_income_data(income_data: bytes) -> None:
         message = command_long_message("MAV_CMD_COMPONENT_ARM_DISARM", [0])
         send_mavlink_message(message)
     if income_data.decode().startswith("set_param"):
-        logger.info("Got set_param")
         _, param_name, value = income_data.decode().split(":")
-        logger.info(f"Setting {param_name} to {value}")
+        logger.info(f"Setting {param_name} to {value}.")
         message = {
             "type": "PARAM_SET",
             "param_value": float(value),
@@ -357,7 +353,7 @@ def gather_sensors_data():
         #data = response.json()
         #mission_status = data["mission_status"]
     except Exception as error:
-        logger.exception(f"Failed fetching autopilot motor data. {error=}")
+        logger.exception(f"Failed fetching autopilot mission data. {error=}")
 
     global_message = {
         'name': 'global',
@@ -396,25 +392,24 @@ def gather_sensors_data():
 async def main_data_out_loop(args: argparse.Namespace):
     while True:
         try:
-            logger.debug("Gattering data from payloads.")
+            logger.info("Gattering data from payloads.")
             new_data = gather_sensors_data()
 
-            logger.debug(
-                f"Storing gathered data on memory persistency: {new_data}")
+            logger.info(f"Storing gathered data on memory persistency: {new_data}")
             unsent_data.append(new_data)
 
-            logger.debug("Trying to send gathered data through satellites.")
+            logger.info("Trying to send gathered data through satellites.")
             send_data_through_rockblock()
         except Exception as error:
             logger.exception(error)
         finally:
-            logger.debug(f"Resting for a moment ({REST_TIME_DATA_OUT} seconds) before next data transmission.")
+            logger.info(f"Resting for a moment ({REST_TIME_DATA_OUT} seconds) before next data transmission.")
             await asyncio.sleep(REST_TIME_DATA_OUT)
 
 async def main_data_in_loop():
     while True:
         try:
-            logger.debug("Checking for incoming messages from the satellites.")
+            logger.info("Checking for incoming messages from the satellites.")
             income_data = get_data_through_rockblock()
             if income_data is not None:
                 logger.debug(f"Data received: {income_data}")
@@ -422,7 +417,7 @@ async def main_data_in_loop():
         except Exception as error:
             logger.exception(error)
         finally:
-            logger.debug(f"Resting for a moment ({REST_TIME_DATA_IN} seconds) before checking for new incoming messages.")
+            logger.info(f"Resting for a moment ({REST_TIME_DATA_IN} seconds) before checking for new incoming messages.")
             await asyncio.sleep(REST_TIME_DATA_IN)
 
 def configure_logging(args: argparse.Namespace):
