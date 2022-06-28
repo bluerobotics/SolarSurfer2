@@ -67,7 +67,7 @@ def get_data_through_rockblock() -> Optional[bytes]:
     last_message = None
     rb, ser = init_rockblock()
     logger.debug(f"Status: {rb.status} // Ring Alert mode: {rb.ring_alert} // Ring Alert status: {rb.ring_indication}")
-    ring_alert_received = rb.status[4] != 1
+    ring_alert_received = rb.status[4] == 1
     if ring_alert_received:
         logger.info("Ring alert received. Modem Terminated message *maybe* available.")
     if MESSAGES_ON_MT_QUEUE or ring_alert_received:
