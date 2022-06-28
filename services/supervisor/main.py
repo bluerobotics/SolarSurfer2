@@ -8,6 +8,7 @@ from loguru import logger
 import requests
 
 
+REST_TIME_SERVICES_CHECK = 60
 SOLAR_SURFER2="/home/pi"
 SERVICES_PATH=f"{SOLAR_SURFER2}/services"
 TOOLS_PATH=f"{SOLAR_SURFER2}/tools"
@@ -25,8 +26,10 @@ services: List[Service] = [
 
 
 def restart_service(service: Service) -> None:
+    logger.debug(f"Killing service '{service.name}'.")
     kill_service(service)
     time.sleep(10)
+    logger.debug(f"Starting service '{service.name}' with command-line '{service.command_line}'.")
     start_service(service)
     time.sleep(10)
 
@@ -34,13 +37,13 @@ def kill_service(service: Service) -> None:
     system(f"tmux kill-session -t '{service.name}'")
 
 def start_service(service: Service) -> None:
-    logger.debug(f"Starting service '{service.name}' with command-line '{service.command_line}'")
     system(f"tmux new -d -s {service.name}")
     system(f"tmux send-keys -t {service.name} '{service.command_line}' C-m")
 
 def main():
     while True:
-        time.sleep(60)
+        logger.debug(f"Resting for {REST_TIME_SERVICES_CHECK} seconds before next supervisor cycle.")
+        time.sleep(REST_TIME_SERVICES_CHECK)
         for service in services:
             restart = False
             try:
@@ -64,6 +67,7 @@ def main():
                         logger.exception(error)
 
 if __name__ == "__main__":
+    logger.info("Supervisor service started.")
     while True:
         try:
             main()
