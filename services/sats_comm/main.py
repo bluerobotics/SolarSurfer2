@@ -33,6 +33,7 @@ parser.add_argument("--serial", type=str, help="Serial port", required=True)
 
 args = parser.parse_args()
 
+MESSAGES_ON_MT_QUEUE = False
 REST_TIME_DATA_OUT = 1800
 REST_TIME_DATA_IN = 10
 unsent_data = []
@@ -62,16 +63,33 @@ def send_data_through_rockblock():
     ser.close()
 
 def get_data_through_rockblock() -> Optional[bytes]:
+    global MESSAGES_ON_MT_QUEUE
     last_message = None
     rb, ser = init_rockblock()
     logger.debug(f"Status: {rb.status} // Ring Alert mode: {rb.ring_alert} // Ring Alert status: {rb.ring_indication}")
-    if rb.ring_indication[1] == "001" and rb.status[4] != 0:
-        logger.info("Modem Terminated message available. Pulling data from the satellites.")
-        status_pkg = rb.satellite_transfer(ring=True)
-        mo_status = status_pkg[0]
-        status = (mo_status, mo_status_message[mo_status])
-        logger.debug(f"status_pkg: {status_pkg} // mo_status: {mo_status} // status: {status}")
-        last_message: bytes = rb.data_in
+    ring_alert_received = rb.status[4] != 1
+    if ring_alert_received:
+        logger.info("Ring alert received. Modem Terminated message *maybe* available.")
+    if MESSAGES_ON_MT_QUEUE or ring_alert_received:
+        logger.info("Pulling messages from the satellites.")
+        retries = 0
+        max_retries = 10
+        while retries < max_retries:
+            logger.debug(f"Retry {retries}.")
+            status_pkg = rb.satellite_transfer(ring=True)
+            mo_status = status_pkg[0]
+            status = (mo_status, mo_status_message[mo_status])
+            logger.debug(f"status_pkg: {status_pkg} // mo_status: {mo_status} // status: {status}")
+            if mo_status <= 5:
+                last_message: bytes = rb.data_in
+                logger.success("Sucessfully received message.")
+                MESSAGES_ON_MT_QUEUE = int(status_pkg[5]) > 0
+                if MESSAGES_ON_MT_QUEUE:
+                    logger.debug("There are still MT messages on the queue.")
+                break
+            logger.error("Failed receiving message. Retrying...")
+            time.sleep(0.1)
+            retries += 1
     ser.close()
     return last_message
 
