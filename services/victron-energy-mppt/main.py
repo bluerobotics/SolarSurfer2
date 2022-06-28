@@ -41,15 +41,29 @@ async def read_data(args: argparse.Namespace) -> None:
                 lines = []
                 while True:
                     await asyncio.sleep(0.01)
-                    lines += [device.readline().decode('ascii', errors='replace').strip()]
-                    logger.debug(lines[-1])
-                    if 'Checksum' in lines[-1] and 'PID' in lines[0]:
+
+                    if device.in_waiting == 0:
+                        continue
+
+                    data = device.readline()
+                    logger.debug(f"Read {data=}")
+                    # Using 'backslashreplace' to keep the byte of the Checksum intact: b'Checksum\t\x92\r\n' -> b'Checksum\t\\x92'
+                    lines += [data.decode('ascii',
+                                          errors='backslashreplace').strip()]
+                    logger.debug(f"Data decoded as {lines[-1]=}")
+
+                    # "The maximum number of fields in a block is 22" ("VE.Direct Protocol" pdf, downloadable from https://www.victronenergy.com/support-and-downloads/technical-information)
+                    if 'PID' not in lines[0] or len(lines) > 22:
+                        logger.debug(
+                            f"Start of the frame (\"PID\") not in received, or received too many fields ({len(lines)}) without \"Checksum\", skipping...")
+                        lines = []
+                        continue
+
+                    # Only parse after have the Checksum of the block
+                    if 'Checksum' in lines[-1]:
                         logger.debug(lines)
                         parse(lines)
                         beat_the_heart()
-                        lines = []
-                    if len(lines) > 40:
-                        logger.debug('Buffer is huge aborting!')
                         lines = []
 
         except Exception as exception:
