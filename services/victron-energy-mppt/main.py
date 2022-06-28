@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+from datetime import datetime
 import pynmea2
 import serial
 import time
@@ -15,6 +16,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 app = FastAPI()
 
 global_data = {}
+UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
 
 
 def parse(lines) -> None:
@@ -40,6 +42,7 @@ async def read_data(args: argparse.Namespace) -> None:
                     if 'Checksum' in lines[-1] and 'PID' in lines[0]:
                         logger.debug(lines)
                         parse(lines)
+                        beat_the_heart()
                         lines = []
                     if len(lines) > 40:
                         logger.debug('Buffer is huge aborting!')
@@ -47,6 +50,11 @@ async def read_data(args: argparse.Namespace) -> None:
 
         except Exception as exception:
             logger.exception(f"Exception: {exception}")
+
+
+def beat_the_heart():
+    global UTC_TIME_LAST_HEARTBEAT
+    UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -63,6 +71,15 @@ async def root():
 @app.get("/data", response_class=JSONResponse)
 async def data():
     return global_data
+
+
+@app.get("/status", response_class=JSONResponse)
+async def status():
+    return {
+        "utcTimeNow": datetime.utcnow(),
+        "utcTimeLastHeartbeat": UTC_TIME_LAST_HEARTBEAT,
+        "secondsSinceLastHeartbeat": (datetime.utcnow() - UTC_TIME_LAST_HEARTBEAT).seconds,
+    }
 
 
 class LoguruLevelArgumentValidator(argparse.Action):
