@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from os import system
 import time
@@ -15,7 +15,14 @@ SERVICES_PATH=f"{SOLAR_SURFER2}/services"
 TOOLS_PATH=f"{SOLAR_SURFER2}/tools"
 LOGS_PATH="/var/logs/blueos/solarsurfer"
 
-Service = namedtuple("Service", ["name", "status_url", "seconds_off_before_killing", "command_line", "utc_time_last_reach"])
+@dataclass
+class Service:
+    name: str
+    status_url: str
+    seconds_off_before_killing: int
+    command_line: str
+    utc_time_last_reach: datetime
+
 services: List[Service] = [
     Service(
         name="sats_comm",
