@@ -2,16 +2,44 @@
 
 import argparse
 import asyncio
+from datetime import datetime
 import json
 import math
 from typing import Any, Dict, List, Optional, Tuple
 import requests
 import serial
 import time
+import uvicorn
 from loguru import logger
 from adafruit_rockblock import RockBlock, mo_status_message
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from messages import serialize, serialize_message
+
+
+app = FastAPI()
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return """
+        <html>
+            <head>
+                <title>Satellite communication service</title>
+            </head>
+        </html>
+    """
+
+
+@app.get("/status", response_class=JSONResponse)
+async def status():
+    return {
+        "utcTimeNow": datetime.utcnow(),
+        "utcTimeLastHeartbeat": UTC_TIME_LAST_HEARTBEAT,
+        "secondsSinceLastHeartbeat": (datetime.utcnow() - UTC_TIME_LAST_HEARTBEAT).seconds,
+    }
+
+
 
 class LoguruLevelArgumentValidator(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -33,6 +61,7 @@ parser.add_argument("--serial", type=str, help="Serial port", required=True)
 
 args = parser.parse_args()
 
+UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
 MESSAGES_ON_MT_QUEUE = False
 REST_TIME_DATA_OUT = 1800
 REST_TIME_DATA_IN = 10
@@ -407,6 +436,10 @@ def gather_sensors_data():
 
     return serialize(global_message)
 
+def beat_the_heart():
+    global UTC_TIME_LAST_HEARTBEAT
+    UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
+
 
 async def main_data_out_loop(args: argparse.Namespace):
     while True:
@@ -419,6 +452,7 @@ async def main_data_out_loop(args: argparse.Namespace):
 
             logger.info("Trying to send gathered data through satellites.")
             send_data_through_rockblock()
+            beat_the_heart()
         except Exception as error:
             logger.exception(error)
         finally:
@@ -461,10 +495,17 @@ if __name__ == "__main__":
             # Log information about the satellite modem
             log_modem_info()
 
-            # Main data in and data out loops
             loop = asyncio.new_event_loop()
+
+            # Main data in and data out loops
             loop.create_task(main_data_in_loop())
             loop.create_task(main_data_out_loop(args))
+
+            # Create API
+            config = uvicorn.Config(app=app, loop=loop, host="0.0.0.0", port=9992, log_config=None)
+            server = uvicorn.Server(config)
+            loop.create_task(server.serve())
+
             loop.run_forever()
         except Exception as e:
             logger.error("Exception in the main loop. Restarting.")
