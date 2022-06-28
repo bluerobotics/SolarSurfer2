@@ -20,5 +20,6 @@ setuptools.setup(
         "uvicorn==0.17.6",
         "requests==2.28.0",
         "loguru==0.6.0",
+        "psutil == 5.7.2",
     ],
 )
