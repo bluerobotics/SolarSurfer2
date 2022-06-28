@@ -23,6 +23,10 @@ def parse(lines) -> None:
     try:
         for line in lines:
             content = line.split('\t')
+            if len(content) != 2:
+                logger.warning(
+                    f"Can't parse because it is missing a separator (\\t) or has more than one. {line=}.")
+                break
             global_data[content[0]] = content[1]
     except Exception as exception:
         logger.exception(f"Parser failed: {exception=}")
