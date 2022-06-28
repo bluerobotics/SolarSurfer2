@@ -92,6 +92,7 @@ def init_rockblock() -> Tuple[RockBlock, serial.Serial]:
         parity="N",
         stopbits=1,
         timeout=1,
+        write_timeout=1,
     )
     rb = RockBlock(ser)
     rb.ring_alert = True
