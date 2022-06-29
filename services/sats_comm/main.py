@@ -299,6 +299,9 @@ def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("set_param"):
         _, param_name, value = income_data.decode().split(":")
         set_param(param_name, float(value))
+    acknowledge_message = f"cmd_ack:{income_data.decode()}".encode("ascii")
+    unsent_data.append(acknowledge_message)
+    send_data_through_rockblock()
 
 def gather_sensors_data():
     try:
