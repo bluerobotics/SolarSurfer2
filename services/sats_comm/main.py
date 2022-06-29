@@ -63,7 +63,7 @@ args = parser.parse_args()
 
 UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
 MESSAGES_ON_MT_QUEUE = False
-REST_TIME_DATA_OUT = 1800
+REST_TIME_DATA_OUT = 120
 REST_TIME_DATA_IN = 10
 unsent_data = []
 
