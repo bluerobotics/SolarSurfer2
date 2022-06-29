@@ -168,19 +168,64 @@ def send_mavlink_message(message: Dict[str, Any]) -> None:
     }
     requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
 
-def deal_with_income_data(income_data: bytes) -> None:
+def set_param(param_name, value) -> None:
+    logger.info(f"Setting {param_name} to {value}")
+    message = {
+        "type": "PARAM_SET",
+        "param_value": float(value),
+        "target_system": 1,
+        "target_component": 0,
+        "param_id": [
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00",
+            "\x00"
+        ],
+        "param_type": {
+            "type": "MAV_PARAM_TYPE_REAL32"
+        }
+    }
+
+    for i, char in enumerate(param_name):
+        message["param_id"][i] = char
+
+    send_mavlink_message(message)
+
+async def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("waypoint"):
         _, lat, lon, wait_time, next_id = income_data.decode().split(":")
-        logger.info(f"Going to waypoint {lat}/{lon} and waiting there for {wait_time} minutes. Next waypoint will be {next_id}.")
+        logger.info(f"Going to waypoint {lat}/{lon} for {wait_time}s. Next waypoint will be {next_id}.")
 
+        print(f"Set MISSION_PAUSE_S")
+        set_param("MISSION_PAUSE_S", float(wait_time))
+        await asyncio.sleep(10)
+
+        print(f"Set guided mode")
+        message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 15])
+        send_mavlink_message(message)
+        await asyncio.sleep(10)
+
+        print(f"Set current waypoint")
         message = {
             "type": "MISSION_ITEM_INT",
             "param1": 0.0,
             "param2": 0.0,
             "param3": 0.0,
             "param4": 0.0,
-            "x": float(lat)*1e7,
-            "y": float(lon)*1e7,
+            "x": int(float(lat)*1e7),
+            "y": int(float(lon)*1e7),
             "z": 1.0,
             "seq": 0,
             "command": {
@@ -198,6 +243,9 @@ def deal_with_income_data(income_data: bytes) -> None:
             }
         }
         send_mavlink_message(message)
+        await asyncio.sleep(5)
+
+        print(f"Set next waypoint")
         message = {
             "type": "MISSION_SET_CURRENT",
             "seq": int(next_id),
@@ -248,42 +296,7 @@ def deal_with_income_data(income_data: bytes) -> None:
         send_mavlink_message(message)
     if income_data.decode().startswith("set_param"):
         _, param_name, value = income_data.decode().split(":")
-        logger.info(f"Setting {param_name} to {value}.")
-        message = {
-            "type": "PARAM_SET",
-            "param_value": float(value),
-            "target_system": 1,
-            "target_component": 0,
-            "param_id": [
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00",
-                "\x00"
-            ],
-            "param_type": {
-                "type": "MAV_PARAM_TYPE_REAL32"
-            }
-        }
-
-        for i, char in enumerate(param_name):
-            message["param_id"][i] = char
-
-        send_mavlink_message(message)
-    acknowledge_message = f"cmd_ack:{income_data.decode()}".encode("ascii")
-    unsent_data.append(acknowledge_message)
-    send_data_through_rockblock()
+        set_param(param_name, float(value))
 
 def gather_sensors_data():
     try:
@@ -469,7 +482,7 @@ async def main_data_in_loop():
             income_data = get_data_through_rockblock()
             if income_data is not None:
                 logger.debug(f"Data received: {income_data}")
-                deal_with_income_data(income_data)
+                await deal_with_income_data(income_data)
         except Exception as error:
             logger.exception(error)
         finally:
