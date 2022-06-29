@@ -15,7 +15,7 @@ from adafruit_rockblock import RockBlock, mo_status_message
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from messages import serialize, serialize_message
+from messages import serialize
 
 
 app = FastAPI()
