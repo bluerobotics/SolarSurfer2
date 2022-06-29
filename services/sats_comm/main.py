@@ -179,8 +179,8 @@ def deal_with_income_data(income_data: bytes) -> None:
             "param2": 0.0,
             "param3": 0.0,
             "param4": 0.0,
-            "x": float(lat)*1e7,
-            "y": float(lon)*1e7,
+            "x": int(float(lat)*1e7),
+            "y": int(float(lon)*1e7),
             "z": 1.0,
             "seq": 0,
             "command": {
