@@ -435,7 +435,7 @@ def gather_sensors_data():
         'solar_power': solar_panel_power*255/200,
         'throttle_first': ((left_motor_pwm-1100)/800)*255,
         'throttle_second': ((right_motor_pwm-1100)/800)*255,
-        'air_temperature': air_temp*255/64,
+        'air_temperature': 0, #air_temp*255/64,
         'water_temperature': 0, #water_temp*255/64,
         'cpu': cpu_average_usage*255/100,
         'memory': used_memory*255/100,
