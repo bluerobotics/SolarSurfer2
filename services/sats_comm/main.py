@@ -203,19 +203,19 @@ def set_param(param_name, value) -> None:
 
     send_mavlink_message(message)
 
-async def deal_with_income_data(income_data: bytes) -> None:
+def deal_with_income_data(income_data: bytes) -> None:
     if income_data.decode().startswith("waypoint"):
         _, lat, lon, wait_time, next_id = income_data.decode().split(":")
         logger.info(f"Going to waypoint {lat}/{lon} for {wait_time}s. Next waypoint will be {next_id}.")
 
         print(f"Set MISSION_PAUSE_S")
         set_param("MISSION_PAUSE_S", float(wait_time))
-        await asyncio.sleep(10)
+        time.sleep(10)
 
         print(f"Set guided mode")
         message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 15])
         send_mavlink_message(message)
-        await asyncio.sleep(10)
+        time.sleep(10)
 
         print(f"Set current waypoint")
         message = {
@@ -243,7 +243,7 @@ async def deal_with_income_data(income_data: bytes) -> None:
             }
         }
         send_mavlink_message(message)
-        await asyncio.sleep(5)
+        time.sleep(5)
 
         print(f"Set next waypoint")
         message = {
@@ -482,7 +482,7 @@ async def main_data_in_loop():
             income_data = get_data_through_rockblock()
             if income_data is not None:
                 logger.debug(f"Data received: {income_data}")
-                await deal_with_income_data(income_data)
+                deal_with_income_data(income_data)
         except Exception as error:
             logger.exception(error)
         finally:
