@@ -171,7 +171,7 @@ def send_mavlink_message(message: Dict[str, Any]) -> None:
     logger.debug(f"Response from Mavlink2Rest: {response.__dict__}")
 
 def set_param(param_name, value) -> None:
-    logger.info(f"Setting {param_name} to {value}")
+    logger.info(f"Setting {param_name} to {value}.")
     message = {
         "type": "PARAM_SET",
         "param_value": float(value),
@@ -210,16 +210,16 @@ def deal_with_income_data(income_data: bytes) -> None:
         _, lat, lon, wait_time, next_id = income_data.decode().split(":")
         logger.info(f"Going to waypoint {lat}/{lon} for {wait_time}s. Next waypoint will be {next_id}.")
 
-        print(f"Set MISSION_PAUSE_S")
+        logger.debug("Setting MISSION_PAUSE_S.")
         set_param("MISSION_PAUSE_S", float(wait_time))
         time.sleep(10)
 
-        print(f"Set guided mode")
+        logger.debug("Setting guided mode.")
         message = command_long_message("MAV_CMD_DO_SET_MODE", [1, 15])
         send_mavlink_message(message)
         time.sleep(10)
 
-        print(f"Set current waypoint")
+        logger.debug("Setting current waypoint.")
         message = {
             "type": "MISSION_ITEM_INT",
             "param1": 0.0,
@@ -247,7 +247,7 @@ def deal_with_income_data(income_data: bytes) -> None:
         send_mavlink_message(message)
         time.sleep(5)
 
-        print(f"Set next waypoint")
+        logger.debug("Setting next waypoint.")
         message = {
             "type": "MISSION_SET_CURRENT",
             "seq": int(next_id),
