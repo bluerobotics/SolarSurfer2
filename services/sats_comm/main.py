@@ -281,6 +281,9 @@ def deal_with_income_data(income_data: bytes) -> None:
             message["param_id"][i] = char
 
         send_mavlink_message(message)
+    acknowledge_message = f"cmd_ack:{income_data.decode()}".encode("ascii")
+    unsent_data.append(acknowledge_message)
+    send_data_through_rockblock()
 
 def gather_sensors_data():
     try:
