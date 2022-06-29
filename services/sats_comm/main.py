@@ -166,7 +166,9 @@ def send_mavlink_message(message: Dict[str, Any]) -> None:
         "header": {"system_id": 255, "component_id": 240, "sequence": 0},
         "message": message,
     }
-    requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
+    logger.debug(f"Sending following mavlink package to Mavlink2Rest: {mavlink2rest_package}")
+    response = requests.post("http://127.0.0.1:6040/mavlink", data=json.dumps(mavlink2rest_package), timeout=10.0)
+    logger.debug(f"Response from Mavlink2Rest: {response.__dict__}")
 
 def set_param(param_name, value) -> None:
     logger.info(f"Setting {param_name} to {value}")
