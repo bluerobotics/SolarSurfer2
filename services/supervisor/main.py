@@ -89,6 +89,9 @@ services: List[Service] = [
 
 
 def main():
+    [service.start() for service in services]
+    logger.info("SolarSurfer2 running! ☀️🏄‍♂️")
+
     while True:
         logger.debug(
             f"Resting for {REST_TIME_SERVICES_CHECK} seconds before next supervisor cycle.")
