@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import argparse
 from dataclasses import dataclass
 from datetime import datetime
 from os import system
@@ -15,6 +16,33 @@ SERVICES_PATH=f"{SOLAR_SURFER2}/services"
 TOOLS_PATH=f"{SOLAR_SURFER2}/tools"
 LOGS_PATH="/var/logs/blueos/solarsurfer"
 VERBOSITY_LEVEL="INFO"
+
+
+class LoguruLevelArgumentValidator(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        """ Parse loguru log levels """
+        levels = ["TRACE", "DEBUG", "INFO",
+                  "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
+        if values not in levels:
+            raise argparse.ArgumentTypeError(
+                f"Wrong log level passed, available: {levels}.")
+        setattr(namespace, self.dest, values)
+
+
+def get_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Supervisor", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument("--loguru-output-dir", type=str, default=".",
+                        help="Configure loguru output dir.")
+    parser.add_argument("-v", "--verbosity", dest="verbosity", type=str, action=LoguruLevelArgumentValidator, default="INFO",
+                        help="Configure loguru verbosity level: TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL.")
+
+    return parser.parse_args()
+
+
+args = get_arguments()
+
 
 @dataclass
 class Service:
@@ -86,7 +114,20 @@ def main():
                         logger.error(f"Could not restart '{service.name}'.")
                         logger.exception(error)
 
+
+def configure_logging(args: argparse.Namespace):
+    loguru_output_file = args.loguru_output_dir + \
+        "/supervisor/loguru_supervisor_{time}.log"
+
+    logger.add(loguru_output_file,
+               level=args.verbosity, rotation="00:00", compression="zip")
+    logger.warning(
+        f"This service is being logged with Loguru with level {args.verbosity} into the file {loguru_output_file}.")
+
+
 if __name__ == "__main__":
+    configure_logging(args)
+
     logger.info("Supervisor service started.")
     while True:
         try:
