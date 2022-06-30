@@ -8,10 +8,42 @@ import requests
 import argparse
 from loguru import logger
 import threading
-from datetime import timedelta
+import uvicorn
+from datetime import timedelta, datetime
 from typing import Callable, Optional
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from data_logger import DataLogger
+
+app = FastAPI()
+
+UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
+
+
+def beat_the_heart():
+    global UTC_TIME_LAST_HEARTBEAT
+    UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return """
+        <html>
+            <head>
+                <title>DataLogger</title>
+            </head>
+        </html>
+    """
+
+
+@app.get("/status", response_class=JSONResponse)
+async def status():
+    return {
+        "utcTimeNow": datetime.utcnow(),
+        "utcTimeLastHeartbeat": UTC_TIME_LAST_HEARTBEAT,
+        "secondsSinceLastHeartbeat": (datetime.utcnow() - UTC_TIME_LAST_HEARTBEAT).seconds,
+    }
 
 
 def flatten_dict(dictionary: dict, parent_key: bool = False, separator: str = '.') -> dict:
@@ -160,7 +192,16 @@ def main(args: argparse.Namespace):
             'thread': None,
             'args': {
                 'dir': datalog_dir,
-                'period': 60,
+
+    tasks.append(
+        {
+            'task': uvicorn.run,
+            'thread': None,
+            'args': {
+                'app': app,
+                'port': 9993,
+                'host': '0.0.0.0',
+                'log_config': None,
             },
         }
     )
@@ -170,11 +211,14 @@ def main(args: argparse.Namespace):
         time.sleep(1)
         for task in tasks:
             thread = task['thread']
+
             if thread == None or not thread.is_alive():
                 logger.debug(f"Creating a DataLogger. {task=}")
                 task['thread'] = threading.Thread(
                     target=task['task'], daemon=True, kwargs=task['args'])
                 task['thread'].start()
+
+        beat_the_heart()
 
 
 def system_information_filter(data: dict) -> dict:
