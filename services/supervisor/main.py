@@ -24,6 +24,23 @@ class Service:
     command_line: str
     utc_time_last_reach: datetime
 
+    def restart(self) -> None:
+        logger.debug(f"Killing service '{self.name}'.")
+        self.kill_service()
+        time.sleep(10)
+        logger.debug(
+            f"Starting service '{self.name}' with command-line '{self.command_line}'.")
+        self.start_service()
+        time.sleep(10)
+
+    def kill(self) -> None:
+        system(f"tmux kill-session -t '{self.name}'")
+
+    def start(self) -> None:
+        system(f"tmux new -d -s {self.name}")
+        system(f"tmux send-keys -t {self.name} '{self.command_line}' C-m")
+
+
 services: List[Service] = [
     Service(
         name="sats_comm",
@@ -41,21 +58,6 @@ services: List[Service] = [
     ),
 ]
 
-
-def restart_service(service: Service) -> None:
-    logger.debug(f"Killing service '{service.name}'.")
-    kill_service(service)
-    time.sleep(10)
-    logger.debug(f"Starting service '{service.name}' with command-line '{service.command_line}'.")
-    start_service(service)
-    time.sleep(10)
-
-def kill_service(service: Service) -> None:
-    system(f"tmux kill-session -t '{service.name}'")
-
-def start_service(service: Service) -> None:
-    system(f"tmux new -d -s {service.name}")
-    system(f"tmux send-keys -t {service.name} '{service.command_line}' C-m")
 
 def main():
     while True:
@@ -81,7 +83,7 @@ def main():
                 unreachable_for_too_long = seconds_since_last_reachable > service.seconds_off_before_killing
                 if no_heartbeats_for_too_long or unreachable_for_too_long:
                     try:
-                        restart_service(service)
+                        service.restart()
                     except Exception as error:
                         logger.error(f"Could not restart '{service.name}'.")
                         logger.exception(error)
