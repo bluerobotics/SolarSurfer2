@@ -188,6 +188,21 @@ def main(args: argparse.Namespace):
             'thread': None,
             'args': {
                 'dir': datalog_dir,
+                'period': 360,
+            },
+        }
+    )
+
+    tasks.append(
+        {
+            'task': monitor_dir_size_growth,
+            'thread': None,
+            'args': {
+                'dir': datalog_dir + "/..",
+                'period': 360,
+            },
+        }
+    )
 
     tasks.append(
         {
@@ -241,6 +256,8 @@ def monitor_dir_size_growth(dir: str, period: int = 60):
     sizes = [du(dir), 0]  # as [new, old]
     times = [time.time(), 0]  # as [new, old]
     while True:
+        time.sleep(period)
+
         size = du(dir)
         if size != sizes[0]:
             sizes = [size, sizes[0]]
@@ -248,9 +265,7 @@ def monitor_dir_size_growth(dir: str, period: int = 60):
             size_growth = (sizes[0] - sizes[1]) / (times[0] - times[1])
             size_growth *= 24 * 3600 / 1024**2  # bytes per second to megabytes per day
             logger.info(
-                f"Directory: ({dir}) size growth: {size_growth} mb per day.")
-
-        time.sleep(period)
+                f"Directory: ({dir}) size growth: {size_growth} mb per day. Current size is: {sizes[0] / 1024**2} mb")
 
 
 class TimedeltaArgumentValidator(argparse.Action):
