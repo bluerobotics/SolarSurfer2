@@ -85,6 +85,13 @@ services: List[Service] = [
         command_line=f"{SERVICES_PATH}/victron-energy-mppt/main.py --serial {args.serial_victron_energy_mppt} --loguru-output-dir {args.logs_output_base_dir}/victron-energy-mppt --verbosity {args.verbosity}",
         utc_time_last_reach=datetime.utcnow(),
     ),
+    Service(
+        name="data-logger",
+        status_url="http://127.0.0.1:9993/status",
+        seconds_off_before_killing=600,
+        command_line=f"{SERVICES_PATH}/data_logger/main.py --datalog-output-dir {args.logs_output_base_dir}/data --services-request-interval '00:00:01' --datalog-newfile-interval '24:00:00' --loguru-output-dir={args.logs_output_base_dir}/data_logger --verbosity {args.verbosity}",
+        utc_time_last_reach=datetime.utcnow(),
+    ),
 ]
 
 

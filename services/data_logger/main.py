@@ -8,10 +8,38 @@ import requests
 import argparse
 from loguru import logger
 import threading
-from datetime import timedelta
+import uvicorn
+from datetime import timedelta, datetime
 from typing import Callable, Optional
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from data_logger import DataLogger
+
+app = FastAPI()
+
+global_data = {}
+UTC_TIME_LAST_HEARTBEAT = datetime.utcnow()
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return """
+        <html>
+            <head>
+                <title>DataLogger</title>
+            </head>
+        </html>
+    """
+
+
+@app.get("/status", response_class=JSONResponse)
+async def status():
+    return {
+        "utcTimeNow": datetime.utcnow(),
+        "utcTimeLastHeartbeat": UTC_TIME_LAST_HEARTBEAT,
+        "secondsSinceLastHeartbeat": (datetime.utcnow() - UTC_TIME_LAST_HEARTBEAT).seconds,
+    }
 
 
 def flatten_dict(dictionary: dict, parent_key: bool = False, separator: str = '.') -> dict:
@@ -160,7 +188,16 @@ def main(args: argparse.Namespace):
             'thread': None,
             'args': {
                 'dir': datalog_dir,
-                'period': 60,
+
+    tasks.append(
+        {
+            'task': uvicorn.run,
+            'thread': None,
+            'args': {
+                'app': app,
+                'port': 9993,
+                'host': '0.0.0.0',
+                'log_config': None,
             },
         }
     )
